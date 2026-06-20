@@ -1,0 +1,90 @@
+# =============================================================================
+# CaseBridge .gitignore
+# 隐私优先：任何含真实 PII / 密钥 / 凭证的文件都不得进入仓库。
+# =============================================================================
+
+# ---- 凭证与环境变量（绝不提交）----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.*
+credentials*
+
+# ---- AI 模型密钥 ----
+**/openai_api_key*
+**/deepseek_api_key*
+**/llm_*.key
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ---- Node.js / Next.js ----
+node_modules/
+.next/
+out/
+.npm/
+.pnpm-store/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- 构建产物 ----
+*.tsbuildinfo
+
+# ---- 上传文件 / 附件（可能含 PII）----
+uploads/
+storage/
+media/
+*.local
+
+# ---- 数据库 / 数据转储 ----
+*.sqlite
+*.sqlite3
+*.db
+db_dumps/
+seed/real/            # 真实数据种子（如有），绝不提交
+
+# ---- IDE / 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- AI 辅助工具配置（含本地会话/缓存，不应公开）----
+.zcode/
+.cursor/
+.trae/
+.aider*
+.continue/
+
+# ---- Docker 本地卷 ----
+docker-data/
+postgres-data/
+redis-data/
+minio-data/
+
+# ---- 操作系统 ----
+~$*
+*.tmp
+*.bak
+
+# ---- 明确允许（覆盖上面的通配）----
+!.gitkeep
+!.env.example
