@@ -24,11 +24,14 @@
 | 文档 | 作用 |
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 做什么 / 不做什么 / MVP 范围 / 验收标准 |
+| [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 后续关键版本节点与验收标准 |
 | [`docs/architecture/schema.md`](docs/architecture/schema.md) | 数据模型 / 系统架构 / 状态机 / API 约定 |
 | [`docs/ai/ai-rules.md`](docs/ai/ai-rules.md) | AI 能力红线 / 8 能力输出 Schema / 人工确认门禁 |
 | [`docs/privacy/privacy-design.md`](docs/privacy/privacy-design.md) | PIPL 对齐 / PII 脱敏 / RBAC / 审计 / 同意管理 |
+| [`docs/research/iteration-001.md`](docs/research/iteration-001.md) | 第一轮外部方案与组件调研 |
+| [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
 
-四份文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
+四份核心文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
 
 ---
 
@@ -38,7 +41,7 @@
 
 跑通 9 步：建档 → 走访记录 → AI 提取需求/风险 → AI 提示遗漏 → 资源匹配 → 服务计划草稿 → 转介状态 → 督导式复盘 → 成效追踪。
 
-完整演示流见 [`prd.md` §6.4](docs/product/prd.md)。
+完整演示流见 [`prd.md` §6.4](docs/product/prd.md) 与 [`demo-flow.md`](docs/seeds/demo-flow.md)。
 
 ---
 
@@ -62,6 +65,7 @@
 | Phase | 产出 | 接 AI |
 | --- | --- | --- |
 | 0 准备 | 仓库 + 4 文档 + 10 虚拟案例 + 30 资源 | — |
+| 0.5 基础构建 | 研究报告 / 版本路线 / seeds / Docker / API-Web skeleton | ❌ |
 | 1 业务骨架 | 登录 / clients / cases / case_notes / 时间线 / 资源库 CRUD | ❌ |
 | 2 AI 结构化 | 走访 → 结构化需求 JSON（入 `ai_outputs`） | ✅ |
 | 3 资源匹配 | 标签规则 + AI 推荐理由 + 转介状态 | ✅ |
@@ -85,8 +89,9 @@
 ## 当前状态
 
 - [x] Phase 0 文档：PRD / schema / ai-rules / privacy-design 已完成
-- [ ] Phase 0 数据：10 虚拟案例 + 30 社区资源（待生成）
-- [ ] Phase 0 工程：仓库结构 / Docker Compose（待初始化）
-- [ ] Phase 1 业务骨架（待开发）
+- [x] Phase 0 数据：10 虚拟案例 + 30 社区资源已完成
+- [x] Phase 0.5 调研：iteration-001 已完成
+- [x] Phase 0.5 工程：Docker Compose / FastAPI skeleton / Next.js skeleton 已初始化
+- [ ] Phase 1 业务骨架：见 Issue #1
 
-> **下一步**：先生成演示用虚拟数据（10 案例 + 30 资源），再初始化仓库与 Docker Compose，然后进入 Phase 1 业务骨架。
+> **下一步**：进入 `v0.1.2-business-skeleton`，实现 clients / cases / case_notes / resources 的非 AI 业务闭环。
