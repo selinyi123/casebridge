@@ -1,0 +1,7 @@
+{
+  "case_stages": ["intake", "assessment", "planning", "intervention", "follow_up", "evaluation", "closed", "followback"],
+  "case_statuses": ["open", "closed", "paused"],
+  "goal_statuses": ["not_started", "in_progress", "achieved", "blocked", "dropped"],
+  "referral_statuses": ["to_verify", "contacted", "referred", "success", "failed", "awaiting_callback", "completed"],
+  "ai_review_statuses": ["pending", "accepted", "modified", "rejected"]
+}
