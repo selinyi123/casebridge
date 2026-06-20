@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: casebridge-postgres
+    environment:
+      POSTGRES_DB: casebridge
+      POSTGRES_USER: casebridge
+      POSTGRES_PASSWORD: casebridge_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casebridge -d casebridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: casebridge-redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: casebridge-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: casebridge
+      MINIO_ROOT_PASSWORD: casebridge_dev_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build:
+      context: ../../apps/api
+    container_name: casebridge-api
+    env_file:
+      - ../../apps/api/.env.example
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: ../../apps/web
+    container_name: casebridge-web
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  minio_data:
