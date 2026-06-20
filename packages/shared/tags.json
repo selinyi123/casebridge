@@ -1,0 +1,29 @@
+{
+  "needs": [
+    {"code":"meal_difficulty","name":"餐食困难","match_codes":["meal"]},
+    {"code":"mobility_limited","name":"行动不便","match_codes":["mobility","care","medical"]},
+    {"code":"living_alone","name":"独居","match_codes":["volunteer","care","elderly"]},
+    {"code":"economic_hardship","name":"经济困难","match_codes":["aid","charity"]},
+    {"code":"sleep_emotional","name":"睡眠或情绪关注","match_codes":["support","medical"]},
+    {"code":"weak_family_support","name":"家庭支持弱","match_codes":["family","volunteer","care"]},
+    {"code":"care_burden","name":"照护压力","match_codes":["care","family"]},
+    {"code":"employment_support","name":"就业支持","match_codes":["employment"]},
+    {"code":"education_support","name":"教育支持","match_codes":["education"]},
+    {"code":"legal_consult","name":"法律咨询","match_codes":["legal"]},
+    {"code":"community_mediation","name":"社区调解","match_codes":["mediation","legal"]},
+    {"code":"social_participation","name":"社会参与","match_codes":["social","volunteer"]},
+    {"code":"medical_followup","name":"健康随访","match_codes":["medical"]},
+    {"code":"disabled_support","name":"残障支持","match_codes":["disabled","rehab"]},
+    {"code":"new_worker","name":"新就业群体支持","match_codes":["new_worker","legal","social"]}
+  ],
+  "strengths": [
+    {"code":"strength_active_expression","name":"能主动表达需求"},
+    {"code":"strength_existing_neighbor_support","name":"已有邻里支持"},
+    {"code":"strength_service_willingness","name":"愿意接受服务"}
+  ],
+  "demographic": [
+    {"code":"elderly","name":"老年人"},
+    {"code":"disabled","name":"残障人士"},
+    {"code":"new_worker","name":"新就业群体"}
+  ]
+}
