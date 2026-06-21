@@ -14,6 +14,7 @@ _ai_task_counter = count(1)
 _ai_output_counter = count(1)
 BLOCKED_REFERRAL_STATUSES = {"referred", "success", "completed"}
 VALID_AGREEMENT_STATUSES = {"verbal", "written"}
+APPLYABLE_REVIEW_STATUSES = {"accepted", "modified"}
 
 
 def _dt(value: Any) -> datetime:
@@ -149,6 +150,11 @@ def list_ai_outputs(db: Session, case_id: str) -> list[dict[str, Any]]:
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
+def get_ai_output(db: Session, output_id: str) -> dict[str, Any] | None:
+    row = db.get(AiOutput, output_id)
+    return model_to_dict(row) if row else None
+
+
 def review_ai_output(db: Session, output_id: str, review_status: str, reviewer_notes: str | None = None, modified_output: dict[str, Any] | None = None) -> dict[str, Any] | None:
     output = db.get(AiOutput, output_id)
     if not output:
@@ -162,6 +168,27 @@ def review_ai_output(db: Session, output_id: str, review_status: str, reviewer_n
     db.commit()
     db.refresh(output)
     return model_to_dict(output)
+
+
+def create_apply_preview(db: Session, output_id: str) -> dict[str, Any] | None:
+    output = db.get(AiOutput, output_id)
+    if not output:
+        return None
+    output_dict = model_to_dict(output)
+    if output_dict["review_status"] not in APPLYABLE_REVIEW_STATUSES:
+        raise ValueError("ai_output_not_reviewed_for_apply_preview")
+    preview = {
+        "output_id": output_dict["id"],
+        "case_id": output_dict["case_id"],
+        "note_id": output_dict["note_id"],
+        "review_status": output_dict["review_status"],
+        "candidate_assessment": output_dict["parsed_output"],
+        "will_write_formal_fields": False,
+        "requires_explicit_apply_action": True,
+    }
+    record_audit_event(db, output_dict["case_id"], "ai.apply_preview.created", "ai_output", output_dict["id"], {"review_status": output_dict["review_status"]})
+    db.commit()
+    return preview
 
 
 def list_audit_events(db: Session, case_id: str) -> list[dict[str, Any]]:
