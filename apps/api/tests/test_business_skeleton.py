@@ -25,13 +25,9 @@ def test_client_profile_exists(client: TestClient) -> None:
 
 
 def test_resource_matching_is_deterministic(client: TestClient) -> None:
-    response = client.post(
-        "/api/v1/resources/match",
-        json={"need_tag_codes": ["meal_difficulty", "mobility_limited", "living_alone"]},
-    )
+    response = client.post("/api/v1/resources/match", json={"need_tag_codes": ["meal_difficulty", "mobility_limited", "living_alone"]})
     assert response.status_code == 200
-    candidates = response.json()["candidates"]
-    codes = {item["resource_code"] for item in candidates}
+    codes = {item["resource_code"] for item in response.json()["candidates"]}
     assert "R-001" in codes
     assert "R-003" in codes
     assert "R-005" in codes
@@ -44,10 +40,7 @@ def test_resource_match_rejects_invalid_body_type(client: TestClient) -> None:
 
 def test_create_case_note_preserves_raw_content(client: TestClient) -> None:
     raw = "Synthetic visit note for C-0001."
-    response = client.post(
-        "/api/v1/cases/CASE-0001/notes",
-        json={"note_type": "visit", "content_raw": raw},
-    )
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
     assert response.status_code == 200
     payload = response.json()
     assert payload["note"]["content_raw"] == raw
@@ -57,33 +50,22 @@ def test_create_case_note_preserves_raw_content(client: TestClient) -> None:
 
 def test_created_note_is_visible_in_case_timeline(client: TestClient) -> None:
     raw = "Timeline visibility note for C-0001."
-    create_response = client.post(
-        "/api/v1/cases/CASE-0001/notes",
-        json={"note_type": "visit", "content_raw": raw},
-    )
+    create_response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
     assert create_response.status_code == 200
     note_id = create_response.json()["note"]["id"]
-
     timeline_response = client.get("/api/v1/cases/CASE-0001/notes")
     assert timeline_response.status_code == 200
-    note_ids = {item["id"] for item in timeline_response.json()["items"]}
-    assert note_id in note_ids
+    assert note_id in {item["id"] for item in timeline_response.json()["items"]}
 
 
 def test_create_case_note_rejects_blank_content(client: TestClient) -> None:
-    response = client.post(
-        "/api/v1/cases/CASE-0001/notes",
-        json={"note_type": "visit", "content_raw": ""},
-    )
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": ""})
     assert response.status_code == 422
 
 
 def test_redactor_masks_long_digit_run(client: TestClient) -> None:
     raw = "demo 13800000000"
-    response = client.post(
-        "/api/v1/cases/CASE-0001/notes",
-        json={"note_type": "visit", "content_raw": raw},
-    )
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
     assert response.status_code == 200
     payload = response.json()
     assert "[REDACTED_PHONE]" in payload["note"]["content_clean"]
@@ -91,26 +73,18 @@ def test_redactor_masks_long_digit_run(client: TestClient) -> None:
 
 
 def test_create_service_goal(client: TestClient) -> None:
-    response = client.post(
-        "/api/v1/cases/CASE-0001/goals",
-        json={"title": "建立稳定餐食支持", "target_state": "完成助餐资源核实并形成跟进安排"},
-    )
+    response = client.post("/api/v1/cases/CASE-0001/goals", json={"title": "建立稳定餐食支持", "target_state": "完成助餐资源核实并形成跟进安排"})
     assert response.status_code == 200
     goal = response.json()["goal"]
     assert goal["case_id"] == "CASE-0001"
     assert goal["status"] == "not_started"
-
     list_response = client.get("/api/v1/cases/CASE-0001/goals")
     assert list_response.status_code == 200
-    goal_ids = {item["id"] for item in list_response.json()["items"]}
-    assert goal["id"] in goal_ids
+    assert goal["id"] in {item["id"] for item in list_response.json()["items"]}
 
 
 def test_create_resource_link_candidate(client: TestClient) -> None:
-    response = client.post(
-        "/api/v1/cases/CASE-0001/referrals",
-        json={"resource_code": "R-001", "agreement_status": "none", "notes": "candidate only"},
-    )
+    response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-001", "agreement_status": "none", "notes": "candidate only"})
     assert response.status_code == 200
     referral = response.json()["referral"]
     assert referral["resource_code"] == "R-001"
@@ -119,39 +93,21 @@ def test_create_resource_link_candidate(client: TestClient) -> None:
 
 
 def test_resource_link_requires_agreement_before_referred(client: TestClient) -> None:
-    create_response = client.post(
-        "/api/v1/cases/CASE-0001/referrals",
-        json={"resource_code": "R-003", "agreement_status": "none"},
-    )
+    create_response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-003", "agreement_status": "none"})
     assert create_response.status_code == 200
     referral_id = create_response.json()["referral"]["id"]
-
-    blocked_response = client.patch(
-        f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status",
-        json={"status": "referred"},
-    )
+    blocked_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "referred"})
     assert blocked_response.status_code == 409
-
-    allowed_response = client.patch(
-        f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status",
-        json={"status": "referred", "agreement_status": "verbal"},
-    )
+    allowed_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "referred", "agreement_status": "verbal"})
     assert allowed_response.status_code == 200
     assert allowed_response.json()["referral"]["status"] == "referred"
 
 
 def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
-    goal_response = client.post(
-        "/api/v1/cases/CASE-0001/goals",
-        json={"title": "timeline goal", "target_state": "visible in unified timeline"},
-    )
+    goal_response = client.post("/api/v1/cases/CASE-0001/goals", json={"title": "timeline goal", "target_state": "visible in unified timeline"})
     assert goal_response.status_code == 200
-    link_response = client.post(
-        "/api/v1/cases/CASE-0001/referrals",
-        json={"resource_code": "R-005", "agreement_status": "none"},
-    )
+    link_response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-005", "agreement_status": "none"})
     assert link_response.status_code == 200
-
     timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
     assert timeline_response.status_code == 200
     kinds = {item["kind"] for item in timeline_response.json()["items"]}
@@ -159,3 +115,47 @@ def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
     assert "goal" in kinds
     assert "resource_link" in kinds
     assert "audit" in kinds
+
+
+def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
+    notes = client.get("/api/v1/cases/CASE-0001/notes").json()["items"]
+    note_id = notes[0]["id"]
+    response = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id})
+    assert response.status_code == 200
+    output = response.json()["output"]
+    assert output["review_status"] == "pending"
+    assert output["output_type"] == "intake"
+    assert "needs" in output["parsed_output"]
+
+    outputs_response = client.get("/api/v1/cases/CASE-0001/ai/outputs")
+    assert outputs_response.status_code == 200
+    assert output["id"] in {item["id"] for item in outputs_response.json()["items"]}
+
+
+def test_ai_output_review_updates_review_status_only(client: TestClient) -> None:
+    note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
+    review_response = client.patch(
+        f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review",
+        json={"review_status": "accepted", "reviewer_notes": "manual review completed"},
+    )
+    assert review_response.status_code == 200
+    reviewed = review_response.json()["output"]
+    assert reviewed["review_status"] == "accepted"
+    case_response = client.get("/api/v1/cases/CASE-0001")
+    assert case_response.status_code == 200
+    assert "ai_outputs" not in case_response.json()["case"]
+
+
+def test_timeline_contains_ai_output_and_review_audit(client: TestClient) -> None:
+    note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "rejected"})
+    timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
+    assert timeline_response.status_code == 200
+    items = timeline_response.json()["items"]
+    kinds = {item["kind"] for item in items}
+    audit_titles = {item["title"] for item in items if item["kind"] == "audit"}
+    assert "ai_output" in kinds
+    assert "ai.intake_draft.created" in audit_titles
+    assert "ai.output.reviewed" in audit_titles
