@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -34,8 +36,9 @@ class GenerateAiIntakeRequest(BaseModel):
 
 class ReviewAiOutputRequest(BaseModel):
     review_status: str = Field(pattern="^(accepted|modified|rejected)$")
+    reviewer_id: str = Field(default="demo_social_worker", min_length=1, max_length=120)
     reviewer_notes: str | None = Field(default=None, max_length=2000)
-    modified_output: dict | None = None
+    modified_output: dict[str, Any] | None = None
 
 
 class ApplyAiOutputRequest(BaseModel):
@@ -59,4 +62,4 @@ class IntakeDraftOutput(BaseModel):
     strengths: list[str] = Field(default_factory=list)
     missing_info: list[str] = Field(default_factory=list)
     suggested_next_steps: list[str] = Field(default_factory=list)
-    disclaimer: str = "AI draft only; social worker review required."
+    disclaimer: str = "AI 生成草稿，需要社工人工确认"
