@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import RequireAdmin, RequireCaseWriter
 from app.db.assessment_revision_repository import create_assessment_correction, list_assessment_corrections
-from app.db.models import User
 from app.db.persistent_repository import get_case, list_case_assessments
 from app.db.session import get_db
 
@@ -27,7 +26,7 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 def corrections(case_id: str, assessment_id: str, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id, organization_id=current_user.organization_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    return {"items": list_assessment_corrections(db, case_id, assessment_id)}
+    return {"items": list_assessment_corrections(db, case_id, assessment_id, organization_id=current_user.organization_id)}
 
 
 @router.post("/{assessment_id}/corrections")
@@ -40,6 +39,7 @@ def create_correction(case_id: str, assessment_id: str, payload: AssessmentCorre
             case_id,
             assessment_id,
             {
+                "organization_id": current_user.organization_id,
                 "reviewer_id": current_user.username,
                 "reviewer_role": current_user.role,
                 "reason": payload.reason,
