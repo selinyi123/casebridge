@@ -26,3 +26,22 @@ class CreateReferralRequest(BaseModel):
 class UpdateReferralStatusRequest(BaseModel):
     status: str = Field(pattern="^(to_verify|contacted|referred|success|failed|awaiting_callback|completed)$")
     agreement_status: str | None = Field(default=None, pattern="^(none|verbal|written|expired)$")
+
+
+class GenerateAiIntakeRequest(BaseModel):
+    note_id: str = Field(min_length=1, max_length=40)
+
+
+class ReviewAiOutputRequest(BaseModel):
+    review_status: str = Field(pattern="^(accepted|modified|rejected)$")
+    reviewer_notes: str | None = Field(default=None, max_length=2000)
+    modified_output: dict | None = None
+
+
+class IntakeDraftOutput(BaseModel):
+    needs: list[str] = Field(default_factory=list)
+    risk_clues: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    missing_info: list[str] = Field(default_factory=list)
+    suggested_next_steps: list[str] = Field(default_factory=list)
+    disclaimer: str = "AI draft only; social worker review required."
