@@ -30,10 +30,11 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 @router.post("")
 def create(case_id: str, payload: CreateServiceOutcomeRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
-    if not get_case(db, case_id):
+    organization_id = current_user.organization_id
+    if not get_case(db, case_id, organization_id=organization_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
-        outcome = create_service_outcome(db, case_id, payload.model_dump(), actor=current_user.username)
+        outcome = create_service_outcome(db, case_id, payload.model_dump(), actor=current_user.username, organization_id=organization_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"outcome": outcome}
