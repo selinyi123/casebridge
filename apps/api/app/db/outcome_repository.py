@@ -25,12 +25,20 @@ def create_service_outcome(db: Session, case_id: str, payload: dict[str, Any]) -
     gas_score = payload.get("gas_score")
     if gas_score is not None and (gas_score < -2 or gas_score > 2):
         raise ValueError("gas_score_out_of_range")
+
     goal_id = payload.get("goal_id")
     assessment_id = payload.get("assessment_id")
-    if goal_id and not db.get(ServiceGoal, goal_id):
-        raise ValueError("goal_not_found")
-    if assessment_id and not db.get(CaseAssessment, assessment_id):
-        raise ValueError("assessment_not_found")
+
+    if goal_id:
+        goal = db.get(ServiceGoal, goal_id)
+        if not goal or goal.case_id != case_id:
+            raise ValueError("goal_not_found")
+
+    if assessment_id:
+        assessment = db.get(CaseAssessment, assessment_id)
+        if not assessment or assessment.case_id != case_id:
+            raise ValueError("assessment_not_found")
+
     outcome = ServiceOutcome(
         id=_next_id("OUTCOME", _outcome_counter, ServiceOutcome, db),
         case_id=case_id,
@@ -43,7 +51,16 @@ def create_service_outcome(db: Session, case_id: str, payload: dict[str, Any]) -
         recorded_by=payload.get("recorded_by", "demo_social_worker"),
     )
     db.add(outcome)
-    db.add(AuditEvent(case_id=case_id, event_type="outcome.created", entity_type="service_outcome", entity_id=outcome.id, payload={"goal_id": goal_id, "assessment_id": assessment_id, "gas_score": gas_score}))
+    db.add(
+        AuditEvent(
+            case_id=case_id,
+            event_type="outcome.created",
+            entity_type="service_outcome",
+            entity_id=outcome.id,
+            actor=outcome.recorded_by,
+            payload={"goal_id": goal_id, "assessment_id": assessment_id, "gas_score": gas_score},
+        )
+    )
     db.commit()
     db.refresh(outcome)
     return model_to_dict(outcome)
