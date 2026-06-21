@@ -1,0 +1,21 @@
+{
+  "fixture_id": "c0001-intake-golden-001",
+  "prompt_version": "intake-v0.1.7",
+  "provider": "mock",
+  "input": {
+    "case_id": "CASE-0001",
+    "note_id": "NOTE-0001",
+    "clean_text": "今天入户走访 C-0001，老人 78 岁，独居，腿脚不便，最近做饭困难，子女在外地，晚上睡不好，希望了解社区有没有方便吃饭的地方。"
+  },
+  "expected_contains": {
+    "needs": ["餐食支持", "行动与居家安全关注"],
+    "risk_clues": ["行动不便线索", "独居线索"],
+    "strengths": ["能主动表达需求"]
+  },
+  "must_not_do": [
+    "do not create a service goal",
+    "do not create a resource link",
+    "do not classify risk level",
+    "do not write formal case fields"
+  ]
+}
