@@ -25,7 +25,9 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 做什么 / 不做什么 / MVP 范围 / 验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 后续关键版本节点与验收标准 |
-| [`docs/product/v0.1.3-plan.md`](docs/product/v0.1.3-plan.md) | 下一节点：持久化手动个案闭环规划 |
+| [`docs/product/v0.1.3-plan.md`](docs/product/v0.1.3-plan.md) | 持久化手动个案闭环规划 |
+| [`docs/product/v0.1.4-plan.md`](docs/product/v0.1.4-plan.md) | 手动服务目标与资源链接 gate 规划 |
+| [`docs/product/v0.1.5-plan.md`](docs/product/v0.1.5-plan.md) | AI intake gate 规划 |
 | [`docs/architecture/schema.md`](docs/architecture/schema.md) | 数据模型 / 系统架构 / 状态机 / API 约定 |
 | [`docs/ai/ai-rules.md`](docs/ai/ai-rules.md) | AI 能力红线 / 8 能力输出 Schema / 人工确认门禁 |
 | [`docs/privacy/privacy-design.md`](docs/privacy/privacy-design.md) | PIPL 对齐 / PII 脱敏 / RBAC / 审计 / 同意管理 |
@@ -34,9 +36,11 @@
 | [`docs/research/iteration-003.md`](docs/research/iteration-003.md) | 第三轮：隐私脱敏与 LLM guardrail 调研 |
 | [`docs/research/iteration-004.md`](docs/research/iteration-004.md) | 第四轮：持久化 / timeline / audit trail 调研 |
 | [`docs/research/iteration-005.md`](docs/research/iteration-005.md) | 第五轮：case UI / resource matching panel 调研 |
+| [`docs/research/iteration-006.md`](docs/research/iteration-006.md) | 第六轮：service goal / resource link / agreement gate 调研 |
 | [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
 | [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 | [`docs/development/v0.1.3-ui-checklist.md`](docs/development/v0.1.3-ui-checklist.md) | v0.1.3 UI 手动验收清单 |
+| [`docs/development/v0.1.4-checklist.md`](docs/development/v0.1.4-checklist.md) | v0.1.4 手动 gate 验收清单 |
 
 四份核心文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
 
@@ -102,7 +106,8 @@
 - [x] v0.1.2 hardening：Pydantic schema / CORS / redactor hardening / smoke tests 已完成
 - [x] v0.1.3 persistence foundation：SQLAlchemy models / repository / seed loader / Alembic baseline 已完成
 - [x] v0.1.3 UI workspace：C-0001 profile / timeline / note form / resources / matching panel 已完成
+- [x] v0.1.4 manual goal/link gate：service-goal API/UI、resource-link API/UI、agreement-state gate 已完成
 - [ ] CI 结果待确认：GitHub Actions API smoke + Web build 需要查看运行结果
-- [ ] v0.1.3 manual loop remaining：service-goal API/UI 与 referral API/UI 未完成
+- [ ] 下一节点：unified timeline + audit events，然后才进入 AI intake gate
 
-> **下一步**：继续 `v0.1.3-case-loop`，实现 service goals、referrals 和 agreement-state gate；在这些手动流程完成前仍不接 AI。
+> **下一步**：补统一 timeline / audit trail，把 notes、service goals、resource links 统一显示；在 audit trail 完成前仍不接 AI。
