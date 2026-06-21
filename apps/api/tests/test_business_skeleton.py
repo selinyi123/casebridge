@@ -1,17 +1,22 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
-client = TestClient(app)
+
+@pytest.fixture()
+def client() -> TestClient:
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_health_check() -> None:
+def test_health_check(client: TestClient) -> None:
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
 
-def test_client_profile_exists() -> None:
+def test_client_profile_exists(client: TestClient) -> None:
     response = client.get("/api/v1/clients/C-0001")
     assert response.status_code == 200
     payload = response.json()
@@ -19,7 +24,7 @@ def test_client_profile_exists() -> None:
     assert payload["cases"][0]["id"] == "CASE-0001"
 
 
-def test_resource_matching_is_deterministic() -> None:
+def test_resource_matching_is_deterministic(client: TestClient) -> None:
     response = client.post(
         "/api/v1/resources/match",
         json={"need_tag_codes": ["meal_difficulty", "mobility_limited", "living_alone"]},
@@ -32,12 +37,12 @@ def test_resource_matching_is_deterministic() -> None:
     assert "R-005" in codes
 
 
-def test_resource_match_rejects_invalid_body_type() -> None:
+def test_resource_match_rejects_invalid_body_type(client: TestClient) -> None:
     response = client.post("/api/v1/resources/match", json={"need_tag_codes": "meal_difficulty"})
     assert response.status_code == 422
 
 
-def test_create_case_note_preserves_raw_content() -> None:
+def test_create_case_note_preserves_raw_content(client: TestClient) -> None:
     raw = "Synthetic visit note for C-0001."
     response = client.post(
         "/api/v1/cases/CASE-0001/notes",
@@ -50,7 +55,7 @@ def test_create_case_note_preserves_raw_content() -> None:
     assert payload["note"]["source"] == "human"
 
 
-def test_create_case_note_rejects_blank_content() -> None:
+def test_create_case_note_rejects_blank_content(client: TestClient) -> None:
     response = client.post(
         "/api/v1/cases/CASE-0001/notes",
         json={"note_type": "visit", "content_raw": ""},
@@ -58,7 +63,7 @@ def test_create_case_note_rejects_blank_content() -> None:
     assert response.status_code == 422
 
 
-def test_redactor_masks_long_digit_run() -> None:
+def test_redactor_masks_long_digit_run(client: TestClient) -> None:
     raw = "demo 13800000000"
     response = client.post(
         "/api/v1/cases/CASE-0001/notes",
