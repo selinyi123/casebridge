@@ -65,3 +65,20 @@ def test_schema_catalog_alias_is_available(client: TestClient) -> None:
     schema = response.json()["schema"]
     assert schema["schema_id"] == "community-intake-v0.1.10"
     assert "meal_nutrition" in schema["domains"]
+
+
+def test_outcome_report_requires_auth_and_summarizes_manual_outcomes(client: TestClient) -> None:
+    unauthenticated = client.get("/api/v1/cases/CASE-0001/outcomes/report")
+    assert unauthenticated.status_code == 401
+
+    client.post(
+        "/api/v1/cases/CASE-0001/outcomes",
+        json={"gas_score": 2, "narrative": "Report outcome check."},
+        headers=auth_headers(client),
+    )
+    response = client.get("/api/v1/cases/CASE-0001/outcomes/report", headers=auth_headers(client))
+    assert response.status_code == 200
+    report = response.json()
+    assert report["manual_only"] is True
+    assert report["outcome_count"] >= 1
+    assert report["latest_gas_score"] in {-2, -1, 0, 1, 2}
