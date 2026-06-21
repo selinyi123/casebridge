@@ -1,11 +1,14 @@
+import base64
+import hashlib
+import hmac
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,17 +18,40 @@ from app.db.session import get_db
 JWT_SECRET = os.getenv("JWT_SECRET", "change_me_in_real_deployment")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
+PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "120000"))
+PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def _b64encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _b64decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS)
+    return f"{PASSWORD_HASH_PREFIX}${PASSWORD_HASH_ITERATIONS}${_b64encode(salt)}${_b64encode(digest)}"
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return pwd_context.verify(plain_password, password_hash)
+    try:
+        prefix, iterations_raw, salt_raw, digest_raw = password_hash.split("$", 3)
+        if prefix != PASSWORD_HASH_PREFIX:
+            return False
+        iterations = int(iterations_raw)
+        salt = _b64decode(salt_raw)
+        expected_digest = _b64decode(digest_raw)
+    except (ValueError, TypeError):
+        return False
+
+    actual_digest = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt, iterations)
+    return hmac.compare_digest(actual_digest, expected_digest)
 
 
 def create_access_token(subject: str, role: str, organization_id: int, expires_delta: timedelta | None = None) -> str:
