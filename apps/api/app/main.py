@@ -10,6 +10,7 @@ from app.routers.clients import router as clients_router
 from app.routers.demo import router as demo_router
 from app.routers.goals import router as goals_router
 from app.routers.health import router as health_router
+from app.routers.outcomes import router as outcomes_router
 from app.routers.referrals import router as referrals_router
 from app.routers.resources import router as resources_router
 from app.routers.timeline import router as timeline_router
@@ -17,7 +18,7 @@ from app.routers.timeline import router as timeline_router
 app = FastAPI(
     title="CaseBridge API",
     description="CaseBridge social-work case-service API.",
-    version="0.1.9-formal-assessment-target",
+    version="0.1.10-assessment-outcome-tracking",
 )
 
 app.add_middleware(
@@ -42,6 +43,7 @@ app.include_router(clients_router, prefix="/api/v1")
 app.include_router(cases_router, prefix="/api/v1")
 app.include_router(assessments_router, prefix="/api/v1")
 app.include_router(goals_router, prefix="/api/v1")
+app.include_router(outcomes_router, prefix="/api/v1")
 app.include_router(referrals_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
@@ -52,6 +54,6 @@ app.include_router(ai_router, prefix="/api/v1")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.9-formal-assessment-target",
-        "rule": "Formal assessment writes require explicit human apply action.",
+        "version": "0.1.10-assessment-outcome-tracking",
+        "rule": "Assessment schema and outcome tracking remain human-controlled.",
     }
