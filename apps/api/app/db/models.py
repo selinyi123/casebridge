@@ -103,6 +103,19 @@ class ServiceGoal(Base):
     case: Mapped[CaseRecord] = relationship(back_populates="goals")
 
 
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    event_type: Mapped[str] = mapped_column(String(80), index=True)
+    entity_type: Mapped[str] = mapped_column(String(80), index=True)
+    entity_id: Mapped[str] = mapped_column(String(80), index=True)
+    actor: Mapped[str] = mapped_column(String(120), default="demo_social_worker")
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
 def model_to_dict(row: Any) -> dict[str, Any]:
     data: dict[str, Any] = {}
     for column in row.__table__.columns:
