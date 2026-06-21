@@ -7,6 +7,9 @@ from app.db.models import AiOutput, AiTask, CaseAssessment, CaseNote, CaseRecord
 from app.db.outcome_repository import create_service_outcome
 from app.db.persistent_repository import (
     apply_ai_output_to_assessment,
+    create_referral,
+    create_service_goal,
+    get_case,
     list_case_notes,
     review_ai_output,
     update_referral_status,
@@ -59,7 +62,48 @@ def db():
         reviewer_responsibility_accepted=True,
     )
 
-    session.add_all([client_1, client_2, case_1, case_2, note_1, resource, referral_1, referral_2, goal_2, ai_task_1, ai_output_1, assessment_2])
+    client_org2 = Client(
+        organization_id=2,
+        code="C-ORG2",
+        display_name="Org 2 Client",
+        community="Org2",
+        client_type="elderly_alone",
+        primary_concern="org2",
+        tags=[],
+    )
+    case_org2 = CaseRecord(organization_id=2, id="CASE-ORG2", client_code="C-ORG2", title="Org 2 Case")
+    note_org2 = CaseNote(
+        organization_id=2,
+        id="NOTE-ORG2",
+        case_id="CASE-ORG2",
+        content_raw="org2 raw",
+        content_clean="org2 clean",
+        pii_detected=False,
+    )
+    resource_org2 = Resource(organization_id=2, code="R-ORG2", name="Org 2 Resource", category="meal", match_codes=["meal"], status="active")
+    referral_org2 = Referral(organization_id=2, id="REF-ORG2", case_id="CASE-ORG2", resource_code="R-ORG2", status="to_verify", agreement_status="none")
+
+    session.add_all(
+        [
+            client_1,
+            client_2,
+            case_1,
+            case_2,
+            note_1,
+            resource,
+            referral_1,
+            referral_2,
+            goal_2,
+            ai_task_1,
+            ai_output_1,
+            assessment_2,
+            client_org2,
+            case_org2,
+            note_org2,
+            resource_org2,
+            referral_org2,
+        ]
+    )
     session.commit()
 
     try:
@@ -140,3 +184,29 @@ def test_outcome_rejects_assessment_from_other_case(db):
             case_id="CASE-1",
             payload={"assessment_id": "ASSESS-2", "narrative": "Should be rejected"},
         )
+
+
+def test_repository_get_case_is_organization_scoped(db):
+    assert get_case(db, "CASE-ORG2") is None
+    assert get_case(db, "CASE-ORG2", organization_id=2)["id"] == "CASE-ORG2"
+
+
+def test_repository_writers_reject_foreign_organization_case_ids(db):
+    with pytest.raises(ValueError, match="case_not_found"):
+        create_service_goal(db, "CASE-ORG2", {"title": "bad", "target_state": "bad"}, organization_id=1)
+
+    with pytest.raises(ValueError, match="case_not_found"):
+        create_referral(db, "CASE-ORG2", {"resource_code": "R-ORG2", "agreement_status": "none"}, organization_id=1)
+
+    with pytest.raises(ValueError, match="case_not_found"):
+        create_service_outcome(db, "CASE-ORG2", {"narrative": "bad"}, organization_id=1)
+
+
+def test_repository_writers_allow_matching_organization(db):
+    goal = create_service_goal(db, "CASE-ORG2", {"title": "ok", "target_state": "ok"}, organization_id=2)
+    assert goal["organization_id"] == 2
+    assert goal["case_id"] == "CASE-ORG2"
+
+    referral = create_referral(db, "CASE-ORG2", {"resource_code": "R-ORG2", "agreement_status": "none"}, organization_id=2)
+    assert referral["organization_id"] == 2
+    assert referral["case_id"] == "CASE-ORG2"
