@@ -22,13 +22,8 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
-| [`docs/product/v0.1.8-plan.md`](docs/product/v0.1.8-plan.md) | Review apply workflow 规划 |
-| [`docs/product/v0.1.9-plan.md`](docs/product/v0.1.9-plan.md) | Formal assessment target 规划 |
-| [`docs/product/v0.1.10-plan.md`](docs/product/v0.1.10-plan.md) | Assessment schema and outcome tracking 规划 |
-| [`docs/architecture/schema.md`](docs/architecture/schema.md) | 数据模型与 API 约定 |
-| [`docs/ai/ai-rules.md`](docs/ai/ai-rules.md) | AI 能力红线 |
-| [`docs/privacy/privacy-design.md`](docs/privacy/privacy-design.md) | 隐私与审计设计 |
-| [`docs/research/iteration-012.md`](docs/research/iteration-012.md) | assessment schema / outcome tracking 调研 |
+| [`docs/product/v0.1.11-plan.md`](docs/product/v0.1.11-plan.md) | Assessment versioning / reviewer role 规划 |
+| [`docs/research/iteration-013.md`](docs/research/iteration-013.md) | RBAC / audit / evidence chain 调研 |
 | [`docs/development/v0.1.10-checklist.md`](docs/development/v0.1.10-checklist.md) | v0.1.10 outcome tracking 验收清单 |
 
 ---
@@ -37,7 +32,7 @@
 
 场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 服务目标 → 手动成效记录 → 资源链接 → 督导复盘。
+闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 服务目标 → 手动成效记录 → 评估修订审计 → 资源链接 → 督导复盘。
 
 ---
 
@@ -54,5 +49,6 @@
 - [x] v0.1.9 formal assessment target / explicit apply workflow
 - [x] v0.1.10 manual outcome tracking
 - [x] v0.1.10.2 stabilization: outcome migration, timeline integration, schema access alias
+- [x] v0.1.11 assessment correction audit / reviewer role guard / outcome report
 - [ ] CI 结果待确认
-- [ ] 下一节点：assessment versioning / RBAC reviewer role / outcome report view
+- [ ] 下一节点：assessment version table / RBAC persistence / outcome report UI
