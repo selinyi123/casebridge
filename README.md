@@ -24,7 +24,7 @@
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
 | [`docs/product/v0.1.13-plan.md`](docs/product/v0.1.13-plan.md) | Service plan evidence chain 规划 |
 | [`docs/research/iteration-015.md`](docs/research/iteration-015.md) | 服务计划证据链调研 |
-| [`docs/development/v0.1.12-checklist.md`](docs/development/v0.1.12-checklist.md) | v0.1.12 assessment version 验收清单 |
+| [`docs/development/v0.1.13.1-checklist.md`](docs/development/v0.1.13.1-checklist.md) | v0.1.13.1 plan/intervention UI 验收清单 |
 
 ---
 
@@ -32,7 +32,7 @@
 
 场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链 → 资源链接 → 督导复盘。
+闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链事件 → 资源链接 → 督导复盘。
 
 ---
 
@@ -53,5 +53,6 @@
 - [x] v0.1.12 assessment version table / API / version view
 - [x] v0.1.12.1 version timeline integration / admin create view / repository test
 - [x] v0.1.13 service plan / intervention / evidence chain
+- [x] v0.1.13.1 evidence-chain events / plan create UI / intervention create UI
 - [ ] CI 结果待确认
 - [ ] 下一节点：supervisor review panel / closure readiness check
