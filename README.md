@@ -32,6 +32,7 @@
 | [`docs/research/iteration-001.md`](docs/research/iteration-001.md) | 第一轮：case-management 与开源组件调研 |
 | [`docs/research/iteration-002.md`](docs/research/iteration-002.md) | 第二轮：field-data / offline-service 调研 |
 | [`docs/research/iteration-003.md`](docs/research/iteration-003.md) | 第三轮：隐私脱敏与 LLM guardrail 调研 |
+| [`docs/research/iteration-004.md`](docs/research/iteration-004.md) | 第四轮：持久化 / timeline / audit trail 调研 |
 | [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
 | [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 
@@ -97,7 +98,8 @@
 - [x] Phase 0.5 调研与工程：iteration-001 / Docker / FastAPI / Next.js skeleton 已完成
 - [x] Phase 1 业务骨架早期版：clients / cases / notes / resources API 已完成
 - [x] v0.1.2 hardening：Pydantic schema / CORS / redactor hardening / smoke tests 已完成
+- [x] v0.1.3 persistence foundation：SQLAlchemy models / repository / seed loader / Alembic baseline 已完成
 - [ ] CI 结果待确认：GitHub Actions smoke tests 需要查看运行结果
-- [ ] v0.1.3 持久化个案闭环：见 Issue #2
+- [ ] v0.1.3 UI：C-0001 profile / timeline / resource matching panel 未完成
 
-> **下一步**：进入 `v0.1.3-case-loop`，实现 SQLAlchemy / Alembic / seed loader / C-0001 profile + timeline + resource matching UI。
+> **下一步**：继续 `v0.1.3-case-loop` 的前端可视化部分，实现 C-0001 profile + timeline + resource matching UI。
