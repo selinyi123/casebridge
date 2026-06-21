@@ -6,13 +6,15 @@ from app.db.session import SessionLocal, init_db
 from app.routers.cases import router as cases_router
 from app.routers.clients import router as clients_router
 from app.routers.demo import router as demo_router
+from app.routers.goals import router as goals_router
 from app.routers.health import router as health_router
+from app.routers.referrals import router as referrals_router
 from app.routers.resources import router as resources_router
 
 app = FastAPI(
     title="CaseBridge API",
-    description="AI-Native Chinese social-work case-service and resource-collaboration system.",
-    version="0.1.3-case-loop-persistence",
+    description="CaseBridge social-work case-service API.",
+    version="0.1.4-manual-goal-link-gate",
 )
 
 app.add_middleware(
@@ -35,6 +37,8 @@ app.include_router(health_router, prefix="/api/v1")
 app.include_router(demo_router, prefix="/api/v1")
 app.include_router(clients_router, prefix="/api/v1")
 app.include_router(cases_router, prefix="/api/v1")
+app.include_router(goals_router, prefix="/api/v1")
+app.include_router(referrals_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")
 
 
@@ -42,6 +46,6 @@ app.include_router(resources_router, prefix="/api/v1")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.3-case-loop-persistence",
-        "rule": "Persistent case loop before AI.",
+        "version": "0.1.4-manual-goal-link-gate",
+        "rule": "Manual goals and links before AI.",
     }
