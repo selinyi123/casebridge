@@ -22,8 +22,8 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
-| [`docs/product/v0.1.11-plan.md`](docs/product/v0.1.11-plan.md) | Assessment versioning / reviewer role 规划 |
-| [`docs/research/iteration-014.md`](docs/research/iteration-014.md) | Assessment version / token UI 调研 |
+| [`docs/product/v0.1.13-plan.md`](docs/product/v0.1.13-plan.md) | Service plan evidence chain 规划 |
+| [`docs/research/iteration-015.md`](docs/research/iteration-015.md) | 服务计划证据链调研 |
 | [`docs/development/v0.1.12-checklist.md`](docs/development/v0.1.12-checklist.md) | v0.1.12 assessment version 验收清单 |
 
 ---
@@ -32,7 +32,7 @@
 
 场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务目标 → 手动成效记录 → 评估修订审计 → 资源链接 → 督导复盘。
+闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链 → 资源链接 → 督导复盘。
 
 ---
 
@@ -52,5 +52,6 @@
 - [x] v0.1.11 assessment correction audit / reviewer role guard / outcome report
 - [x] v0.1.12 assessment version table / API / version view
 - [x] v0.1.12.1 version timeline integration / admin create view / repository test
+- [x] v0.1.13 service plan / intervention / evidence chain
 - [ ] CI 结果待确认
-- [ ] 下一节点：token-aware UI shell / service plan evidence chain
+- [ ] 下一节点：supervisor review panel / closure readiness check
