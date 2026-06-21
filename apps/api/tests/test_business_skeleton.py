@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.ai.prompt_registry import get_prompt_spec
+from app.ai.provider_registry import generate_with_provider
 from app.main import app
 
 
@@ -117,12 +119,21 @@ def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
     assert "audit" in kinds
 
 
+def test_prompt_registry_rejects_unknown_provider() -> None:
+    prompt = get_prompt_spec("intake-v0.1.7")
+    with pytest.raises(ValueError, match="provider_not_enabled"):
+        generate_with_provider("external", prompt, "clean text")
+
+
 def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
     notes = client.get("/api/v1/cases/CASE-0001/notes").json()["items"]
     note_id = notes[0]["id"]
     response = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id})
     assert response.status_code == 200
-    output = response.json()["output"]
+    payload = response.json()
+    output = payload["output"]
+    assert payload["provider"] == "mock"
+    assert payload["prompt_version"] == "intake-v0.1.7"
     assert output["review_status"] == "pending"
     assert output["output_type"] == "intake"
     assert "needs" in output["parsed_output"]
@@ -155,7 +166,9 @@ def test_timeline_contains_ai_output_and_review_audit(client: TestClient) -> Non
     assert timeline_response.status_code == 200
     items = timeline_response.json()["items"]
     kinds = {item["kind"] for item in items}
+    audit_payloads = [item["payload"]["payload"] for item in items if item["kind"] == "audit"]
     audit_titles = {item["title"] for item in items if item["kind"] == "audit"}
     assert "ai_output" in kinds
     assert "ai.intake_draft.created" in audit_titles
     assert "ai.output.reviewed" in audit_titles
+    assert any(payload.get("prompt_version") == "intake-v0.1.7" for payload in audit_payloads)
