@@ -13,7 +13,6 @@ def utc_now() -> datetime:
 
 class Client(Base):
     __tablename__ = "clients"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(120))
@@ -26,13 +25,11 @@ class Client(Base):
     consent_status: Mapped[str] = mapped_column(String(32), default="oral")
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
     cases: Mapped[list["CaseRecord"]] = relationship(back_populates="client")
 
 
 class CaseRecord(Base):
     __tablename__ = "cases"
-
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     client_code: Mapped[str] = mapped_column(ForeignKey("clients.code"), index=True)
     title: Mapped[str] = mapped_column(String(200))
@@ -40,7 +37,6 @@ class CaseRecord(Base):
     status: Mapped[str] = mapped_column(String(32), default="open")
     primary_worker: Mapped[str] = mapped_column(String(120), default="demo_social_worker")
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
     client: Mapped[Client] = relationship(back_populates="cases")
     notes: Mapped[list["CaseNote"]] = relationship(back_populates="case", cascade="all, delete-orphan")
     referrals: Mapped[list["Referral"]] = relationship(back_populates="case", cascade="all, delete-orphan")
@@ -49,7 +45,6 @@ class CaseRecord(Base):
 
 class CaseNote(Base):
     __tablename__ = "case_notes"
-
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     note_type: Mapped[str] = mapped_column(String(50), default="visit")
@@ -59,13 +54,11 @@ class CaseNote(Base):
     pii_detected: Mapped[bool] = mapped_column(Boolean, default=False)
     source: Mapped[str] = mapped_column(String(32), default="human")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
     case: Mapped[CaseRecord] = relationship(back_populates="notes")
 
 
 class Resource(Base):
     __tablename__ = "resources"
-
     code: Mapped[str] = mapped_column(String(40), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     category: Mapped[str] = mapped_column(String(80), index=True)
@@ -78,7 +71,6 @@ class Resource(Base):
 
 class Referral(Base):
     __tablename__ = "referrals"
-
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     resource_code: Mapped[str] = mapped_column(ForeignKey("resources.code"), index=True)
@@ -86,26 +78,22 @@ class Referral(Base):
     agreement_status: Mapped[str] = mapped_column(String(50), default="none")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
     case: Mapped[CaseRecord] = relationship(back_populates="referrals")
 
 
 class ServiceGoal(Base):
     __tablename__ = "service_goals"
-
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     target_state: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50), default="not_started")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
     case: Mapped[CaseRecord] = relationship(back_populates="goals")
 
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     event_type: Mapped[str] = mapped_column(String(80), index=True)
@@ -114,6 +102,33 @@ class AuditEvent(Base):
     actor: Mapped[str] = mapped_column(String(120), default="demo_social_worker")
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class AiTask(Base):
+    __tablename__ = "ai_tasks"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
+    capability: Mapped[str] = mapped_column(String(80), index=True)
+    provider: Mapped[str] = mapped_column(String(80), default="mock")
+    prompt_version: Mapped[str] = mapped_column(String(80), default="intake-v0.1.6")
+    status: Mapped[str] = mapped_column(String(50), default="completed", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class AiOutput(Base):
+    __tablename__ = "ai_outputs"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    task_id: Mapped[str] = mapped_column(ForeignKey("ai_tasks.id"), index=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
+    output_type: Mapped[str] = mapped_column(String(80), default="intake")
+    raw_output: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    parsed_output: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    validation_status: Mapped[str] = mapped_column(String(50), default="valid")
+    review_status: Mapped[str] = mapped_column(String(50), default="pending", index=True)
+    reviewer_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 def model_to_dict(row: Any) -> dict[str, Any]:
