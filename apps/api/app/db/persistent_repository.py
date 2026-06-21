@@ -133,12 +133,12 @@ def update_referral_status(db: Session, referral_id: str, status: str, agreement
     return model_to_dict(referral)
 
 
-def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_output: dict[str, Any]) -> dict[str, Any]:
-    task = AiTask(id=_next_id("AITASK", _ai_task_counter, AiTask, db), case_id=case_id, note_id=note_id, capability="intake", provider="mock", status="completed")
+def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_output: dict[str, Any], provider: str, prompt_version: str) -> dict[str, Any]:
+    task = AiTask(id=_next_id("AITASK", _ai_task_counter, AiTask, db), case_id=case_id, note_id=note_id, capability="intake", provider=provider, prompt_version=prompt_version, status="completed")
     output = AiOutput(id=_next_id("AIOUT", _ai_output_counter, AiOutput, db), task_id=task.id, case_id=case_id, note_id=note_id, output_type="intake", raw_output=parsed_output, parsed_output=parsed_output, validation_status="valid", review_status="pending")
     db.add(task)
     db.add(output)
-    record_audit_event(db, case_id, "ai.intake_draft.created", "ai_output", output.id, {"task_id": task.id, "provider": task.provider, "review_status": output.review_status})
+    record_audit_event(db, case_id, "ai.intake_draft.created", "ai_output", output.id, {"task_id": task.id, "provider": task.provider, "prompt_version": task.prompt_version, "review_status": output.review_status})
     db.commit()
     db.refresh(output)
     return model_to_dict(output)
