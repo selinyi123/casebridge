@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import RequireAdmin, RequireCaseWriter
 from app.core.privacy import redact_text
+from app.db.models import User
 from app.db.persistent_repository import create_case_note, get_case, list_case_notes, list_cases
 from app.db.session import get_db
 from app.schemas import CreateCaseNoteRequest
@@ -29,8 +31,15 @@ def notes(case_id: str, db: Session = Depends(get_db)) -> dict:
     return {"items": list_case_notes(db, case_id)}
 
 
+@router.get("/{case_id}/notes/raw")
+def raw_notes(case_id: str, current_user: RequireAdmin, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    return {"items": list_case_notes(db, case_id, include_raw=True), "viewed_by": current_user.username}
+
+
 @router.post("/{case_id}/notes")
-def create_note(case_id: str, payload: CreateCaseNoteRequest, db: Session = Depends(get_db)) -> dict:
+def create_note(case_id: str, payload: CreateCaseNoteRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     raw = payload.content_raw.strip()
@@ -45,6 +54,7 @@ def create_note(case_id: str, payload: CreateCaseNoteRequest, db: Session = Depe
         },
         content_clean=redacted.clean_text,
         pii_detected=bool(redacted.pii_hits),
+        actor=current_user.username,
     )
     return {
         "note": note,
