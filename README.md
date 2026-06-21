@@ -38,6 +38,7 @@
 | [`docs/research/iteration-004.md`](docs/research/iteration-004.md) | 第四轮：持久化 / timeline / audit trail 调研 |
 | [`docs/research/iteration-005.md`](docs/research/iteration-005.md) | 第五轮：case UI / resource matching panel 调研 |
 | [`docs/research/iteration-006.md`](docs/research/iteration-006.md) | 第六轮：service goal / resource link / agreement gate 调研 |
+| [`docs/research/iteration-007.md`](docs/research/iteration-007.md) | 第七轮：AI review workflow / human feedback 调研 |
 | [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
 | [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 | [`docs/development/v0.1.3-ui-checklist.md`](docs/development/v0.1.3-ui-checklist.md) | v0.1.3 UI 手动验收清单 |
@@ -52,7 +53,7 @@
 
 只做一个强闭环，不做大平台。场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-跑通 9 步：建档 → 走访记录 → AI 提取需求/风险 → AI 提示遗漏 → 资源匹配 → 服务计划草稿 → 转介状态 → 督导复盘 → 成效追踪。
+跑通 9 步：建档 → 走访记录 → AI 提取需求/风险 → AI 提示遗漏 → 资源匹配 → 服务计划草稿 → 转介状态 → 督导式复盘 → 成效追踪。
 
 完整演示流见 [`prd.md` §6.4](docs/product/prd.md) 与 [`demo-flow.md`](docs/seeds/demo-flow.md)。
 
@@ -110,8 +111,8 @@
 - [x] v0.1.3 UI workspace：C-0001 profile / timeline / note form / resources / matching panel 已完成
 - [x] v0.1.4 manual goal/link gate：service-goal API/UI、resource-link API/UI、agreement-state gate 已完成
 - [x] v0.1.5 backend timeline/audit：AuditEvent model、audit writes、unified timeline API 已完成
-- [ ] v0.1.5 web unified timeline panel：本轮尝试更新但被安全检查拦截，需后续拆小 patch
+- [x] v0.1.5 web unified timeline page：`/clients/c-0001/timeline` 独立页面已完成
 - [ ] CI 结果待确认：GitHub Actions API smoke + Web build 需要查看运行结果
-- [ ] 下一节点：web timeline panel 完成后进入 AI intake gate
+- [ ] 下一节点：确认 CI 后进入 AI intake gate
 
-> **下一步**：把前端 timeline 面板拆成更小 patch 更新；确认 CI；然后才进入 AI intake gate。
+> **下一步**：确认 CI；然后进入 `v0.1.6-ai-intake-gate`，新增 `ai_tasks` / `ai_outputs` / mock provider / human review。
