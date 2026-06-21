@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.ai.prompt_registry import get_prompt_spec
 from app.ai.provider_registry import generate_with_provider
 from app.ai.redaction_gateway import run_redaction_gate
+from app.core.auth import RequireCaseWriter
 from app.db.persistent_repository import (
     apply_ai_output_to_assessment,
     create_ai_intake_output,
@@ -29,7 +30,7 @@ def outputs(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("/intake")
-def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session = Depends(get_db)) -> dict:
+def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     note = get_note(db, payload.note_id)
@@ -47,6 +48,7 @@ def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session 
         parsed_output=provider_result.output.model_dump(),
         provider=provider_result.provider,
         prompt_version=provider_result.prompt_version,
+        actor=current_user.username,
     )
     return {
         "output": output,
@@ -57,7 +59,7 @@ def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session 
 
 
 @router.patch("/outputs/{output_id}/review")
-def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, db: Session = Depends(get_db)) -> dict:
+def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
@@ -66,7 +68,7 @@ def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, db: Ses
             case_id=case_id,
             output_id=output_id,
             review_status=payload.review_status,
-            reviewer_id=payload.reviewer_id,
+            reviewer_id=current_user.username,
             reviewer_notes=payload.reviewer_notes,
             modified_output=payload.modified_output,
         )
@@ -78,11 +80,11 @@ def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, db: Ses
 
 
 @router.post("/outputs/{output_id}/apply-preview")
-def apply_preview(case_id: str, output_id: str, db: Session = Depends(get_db)) -> dict:
+def apply_preview(case_id: str, output_id: str, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
-        preview = create_apply_preview(db, case_id, output_id)
+        preview = create_apply_preview(db, case_id, output_id, actor=current_user.username)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not preview:
@@ -91,7 +93,7 @@ def apply_preview(case_id: str, output_id: str, db: Session = Depends(get_db)) -
 
 
 @router.post("/outputs/{output_id}/apply-to-assessment")
-def apply_to_assessment(case_id: str, output_id: str, payload: ApplyAiOutputRequest, db: Session = Depends(get_db)) -> dict:
+def apply_to_assessment(case_id: str, output_id: str, payload: ApplyAiOutputRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
@@ -99,7 +101,7 @@ def apply_to_assessment(case_id: str, output_id: str, payload: ApplyAiOutputRequ
             db,
             case_id=case_id,
             output_id=output_id,
-            reviewer_id=payload.reviewer_id,
+            reviewer_id=current_user.username,
             responsibility_accepted=payload.reviewer_responsibility_accepted,
         )
     except ValueError as exc:
