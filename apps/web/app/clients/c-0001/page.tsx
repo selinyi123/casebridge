@@ -9,6 +9,7 @@ type Resource = { code: string; name: string; category: string; match_codes: str
 type MatchCandidate = { resource_code: string; resource_name: string; category: string; matched_codes: string[]; requires_human_verification: boolean };
 type ServiceGoal = { id: string; title: string; target_state: string; status: string; created_at: string };
 type ResourceLink = { id: string; resource_code: string; status: string; agreement_status: string; notes?: string; created_at: string };
+type LoginPayload = { access_token: string; username: string; role: string; organization_id: number };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const box: React.CSSProperties = { border: "1px solid #ddd", borderRadius: 16, padding: 20, background: "#fff" };
@@ -33,9 +34,31 @@ export default function ClientWorkspacePage() {
   const [newNote, setNewNote] = useState("");
   const [goalTitle, setGoalTitle] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
+  const [auth, setAuth] = useState<LoginPayload | null>(null);
   const [status, setStatus] = useState("Loading workspace...");
 
   const currentTags = useMemo(() => client?.tags || [], [client]);
+
+  function authHeaders(): HeadersInit {
+    if (!auth?.access_token) return { "Content-Type": "application/json" };
+    return { "Content-Type": "application/json", Authorization: `Bearer ${auth.access_token}` };
+  }
+
+  async function loginDemo() {
+    setStatus("Logging in demo social worker...");
+    const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "demo_social_worker", password: "casebridge_demo_password" }),
+    });
+    if (!response.ok) {
+      setStatus("Demo login failed. Check API seed data and JWT_SECRET.");
+      return;
+    }
+    const payload = await response.json();
+    setAuth(payload);
+    setStatus(`Logged in as ${payload.username} (${payload.role}).`);
+  }
 
   async function loadWorkspace() {
     setStatus("Loading workspace...");
@@ -63,9 +86,10 @@ export default function ClientWorkspacePage() {
   async function submitNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!caseRecord || !newNote.trim()) return;
+    if (!auth) { setStatus("Login required before writing notes."); return; }
     setStatus("Saving human note...");
-    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note_type: "visit", content_raw: newNote.trim() }) });
-    if (!response.ok) { setStatus("Failed to save note. Check API logs."); return; }
+    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/notes`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ note_type: "visit", content_raw: newNote.trim() }) });
+    if (!response.ok) { setStatus("Failed to save note. Check auth/API logs."); return; }
     setNewNote("");
     await loadWorkspace();
     setStatus("Note saved. Display uses redacted/clean text by default.");
@@ -74,7 +98,8 @@ export default function ClientWorkspacePage() {
   async function submitGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!caseRecord || !goalTitle.trim() || !goalTarget.trim()) return;
-    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/goals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: goalTitle.trim(), target_state: goalTarget.trim() }) });
+    if (!auth) { setStatus("Login required before creating goals."); return; }
+    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/goals`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ title: goalTitle.trim(), target_state: goalTarget.trim() }) });
     if (!response.ok) { setStatus("Failed to save service goal."); return; }
     setGoalTitle("");
     setGoalTarget("");
@@ -93,7 +118,8 @@ export default function ClientWorkspacePage() {
 
   async function createResourceLink(resourceCode: string) {
     if (!caseRecord) return;
-    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/referrals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resource_code: resourceCode, agreement_status: "none", notes: "Created from resource candidate. Manual verification required." }) });
+    if (!auth) { setStatus("Login required before creating resource links."); return; }
+    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/referrals`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ resource_code: resourceCode, agreement_status: "none", notes: "Created from resource candidate. Manual verification required." }) });
     if (!response.ok) { setStatus("Failed to create resource link."); return; }
     await loadWorkspace();
     setStatus("Resource candidate saved as manual link with agreement_status=none.");
@@ -101,6 +127,7 @@ export default function ClientWorkspacePage() {
 
   async function advanceLink(link: ResourceLink) {
     if (!caseRecord) return;
+    if (!auth) { setStatus("Login required before updating resource links."); return; }
     const next = nextReferralStep(link);
     if (!next) {
       setStatus("This resource link has no further allowed transition.");
@@ -108,7 +135,7 @@ export default function ClientWorkspacePage() {
     }
     const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/referrals/${link.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({ status: next.status, agreement_status: next.agreement_status }),
     });
     if (!response.ok) { setStatus("Link status blocked by consent or transition guard."); return; }
@@ -121,9 +148,13 @@ export default function ClientWorkspacePage() {
   return (
     <main style={{ maxWidth: 1180, margin: "0 auto", padding: 32, fontFamily: "system-ui, sans-serif", background: "#fafafa" }}>
       <header style={{ marginBottom: 24 }}>
-        <p style={muted}>CaseBridge v0.1.10.3-security-stabilization</p>
+        <p style={muted}>CaseBridge v0.1.11-auth-rbac-hardening</p>
         <h1 style={{ fontSize: 34, margin: "4px 0" }}>C-0001 Case Workspace</h1>
         <p style={muted}>{status}</p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12 }}>
+          <button onClick={loginDemo} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #222" }}>Login demo social worker</button>
+          <span style={muted}>{auth ? `Authenticated: ${auth.username} / ${auth.role}` : "Write actions require login."}</span>
+        </div>
       </header>
 
       <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
