@@ -25,11 +25,15 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 做什么 / 不做什么 / MVP 范围 / 验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 后续关键版本节点与验收标准 |
+| [`docs/product/v0.1.3-plan.md`](docs/product/v0.1.3-plan.md) | 下一节点：持久化手动个案闭环规划 |
 | [`docs/architecture/schema.md`](docs/architecture/schema.md) | 数据模型 / 系统架构 / 状态机 / API 约定 |
 | [`docs/ai/ai-rules.md`](docs/ai/ai-rules.md) | AI 能力红线 / 8 能力输出 Schema / 人工确认门禁 |
 | [`docs/privacy/privacy-design.md`](docs/privacy/privacy-design.md) | PIPL 对齐 / PII 脱敏 / RBAC / 审计 / 同意管理 |
-| [`docs/research/iteration-001.md`](docs/research/iteration-001.md) | 第一轮外部方案与组件调研 |
+| [`docs/research/iteration-001.md`](docs/research/iteration-001.md) | 第一轮：case-management 与开源组件调研 |
+| [`docs/research/iteration-002.md`](docs/research/iteration-002.md) | 第二轮：field-data / offline-service 调研 |
+| [`docs/research/iteration-003.md`](docs/research/iteration-003.md) | 第三轮：隐私脱敏与 LLM guardrail 调研 |
 | [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
+| [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 
 四份核心文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
 
@@ -90,8 +94,10 @@
 
 - [x] Phase 0 文档：PRD / schema / ai-rules / privacy-design 已完成
 - [x] Phase 0 数据：10 虚拟案例 + 30 社区资源已完成
-- [x] Phase 0.5 调研：iteration-001 已完成
-- [x] Phase 0.5 工程：Docker Compose / FastAPI skeleton / Next.js skeleton 已初始化
-- [ ] Phase 1 业务骨架：见 Issue #1
+- [x] Phase 0.5 调研与工程：iteration-001 / Docker / FastAPI / Next.js skeleton 已完成
+- [x] Phase 1 业务骨架早期版：clients / cases / notes / resources API 已完成
+- [x] v0.1.2 hardening：Pydantic schema / CORS / redactor hardening / smoke tests 已完成
+- [ ] CI 结果待确认：GitHub Actions smoke tests 需要查看运行结果
+- [ ] v0.1.3 持久化个案闭环：见 Issue #2
 
-> **下一步**：进入 `v0.1.2-business-skeleton`，实现 clients / cases / case_notes / resources 的非 AI 业务闭环。
+> **下一步**：进入 `v0.1.3-case-loop`，实现 SQLAlchemy / Alembic / seed loader / C-0001 profile + timeline + resource matching UI。
