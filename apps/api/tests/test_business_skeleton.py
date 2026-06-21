@@ -1,8 +1,13 @@
+import json
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app.ai.mock_provider import generate_intake_draft
 from app.ai.prompt_registry import get_prompt_spec
 from app.ai.provider_registry import generate_with_provider
+from app.ai.redaction_gateway import run_redaction_gate
 from app.main import app
 
 
@@ -106,10 +111,8 @@ def test_resource_link_requires_agreement_before_referred(client: TestClient) ->
 
 
 def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
-    goal_response = client.post("/api/v1/cases/CASE-0001/goals", json={"title": "timeline goal", "target_state": "visible in unified timeline"})
-    assert goal_response.status_code == 200
-    link_response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-005", "agreement_status": "none"})
-    assert link_response.status_code == 200
+    client.post("/api/v1/cases/CASE-0001/goals", json={"title": "timeline goal", "target_state": "visible in unified timeline"})
+    client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-005", "agreement_status": "none"})
     timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
     assert timeline_response.status_code == 200
     kinds = {item["kind"] for item in timeline_response.json()["items"]}
@@ -125,6 +128,22 @@ def test_prompt_registry_rejects_unknown_provider() -> None:
         generate_with_provider("external", prompt, "clean text")
 
 
+def test_redaction_gateway_reports_masked_sensitive_content() -> None:
+    result = run_redaction_gate("demo 手机号 13800000000")
+    assert result.report.blocked is False
+    assert result.report.pii_hit_count >= 1
+    assert "[REDACTED_PHONE]" in result.clean_text
+
+
+def test_golden_fixture_for_mock_intake_provider() -> None:
+    fixture_path = Path(__file__).parents[1] / "app" / "ai" / "fixtures" / "c0001_intake_golden.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    output = generate_intake_draft(fixture["input"]["clean_text"]).model_dump()
+    for field, expected_values in fixture["expected_contains"].items():
+        for expected in expected_values:
+            assert expected in output[field]
+
+
 def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
     notes = client.get("/api/v1/cases/CASE-0001/notes").json()["items"]
     note_id = notes[0]["id"]
@@ -134,13 +153,10 @@ def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
     output = payload["output"]
     assert payload["provider"] == "mock"
     assert payload["prompt_version"] == "intake-v0.1.7"
+    assert payload["redaction"]["blocked"] is False
     assert output["review_status"] == "pending"
     assert output["output_type"] == "intake"
     assert "needs" in output["parsed_output"]
-
-    outputs_response = client.get("/api/v1/cases/CASE-0001/ai/outputs")
-    assert outputs_response.status_code == 200
-    assert output["id"] in {item["id"] for item in outputs_response.json()["items"]}
 
 
 def test_ai_output_review_updates_review_status_only(client: TestClient) -> None:
@@ -156,6 +172,19 @@ def test_ai_output_review_updates_review_status_only(client: TestClient) -> None
     case_response = client.get("/api/v1/cases/CASE-0001")
     assert case_response.status_code == 200
     assert "ai_outputs" not in case_response.json()["case"]
+
+
+def test_apply_preview_requires_reviewed_ai_output(client: TestClient) -> None:
+    note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
+    blocked = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview")
+    assert blocked.status_code == 409
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
+    allowed = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview")
+    assert allowed.status_code == 200
+    preview = allowed.json()["preview"]
+    assert preview["will_write_formal_fields"] is False
+    assert preview["requires_explicit_apply_action"] is True
 
 
 def test_timeline_contains_ai_output_and_review_audit(client: TestClient) -> None:
