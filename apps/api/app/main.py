@@ -10,11 +10,12 @@ from app.routers.goals import router as goals_router
 from app.routers.health import router as health_router
 from app.routers.referrals import router as referrals_router
 from app.routers.resources import router as resources_router
+from app.routers.timeline import router as timeline_router
 
 app = FastAPI(
     title="CaseBridge API",
     description="CaseBridge social-work case-service API.",
-    version="0.1.4-manual-goal-link-gate",
+    version="0.1.5-unified-timeline-audit",
 )
 
 app.add_middleware(
@@ -40,12 +41,13 @@ app.include_router(cases_router, prefix="/api/v1")
 app.include_router(goals_router, prefix="/api/v1")
 app.include_router(referrals_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")
+app.include_router(timeline_router, prefix="/api/v1")
 
 
 @app.get("/")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.4-manual-goal-link-gate",
-        "rule": "Manual goals and links before AI.",
+        "version": "0.1.5-unified-timeline-audit",
+        "rule": "Unified timeline and audit before AI.",
     }
