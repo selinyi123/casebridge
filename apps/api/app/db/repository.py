@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import count
 from typing import Any
 
@@ -7,6 +8,15 @@ from sqlalchemy.orm import Session
 from app.db.models import CaseNote, CaseRecord, Client, Resource, model_to_dict
 
 _note_counter = count(2)
+
+
+def _parse_optional_datetime(value: Any) -> datetime | None:
+    if value is None or isinstance(value, datetime):
+        return value
+    if isinstance(value, str) and value.strip():
+        normalized = value.replace("Z", "+00:00")
+        return datetime.fromisoformat(normalized)
+    return None
 
 
 def list_clients(db: Session) -> list[dict[str, Any]]:
@@ -48,7 +58,7 @@ def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content
         note_type=payload.get("note_type", "visit"),
         content_raw=payload.get("content_raw", ""),
         content_clean=content_clean,
-        occurred_at=payload.get("occurred_at"),
+        occurred_at=_parse_optional_datetime(payload.get("occurred_at")),
         pii_detected=pii_detected,
         source="human",
     )
