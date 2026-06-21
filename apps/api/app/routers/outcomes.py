@@ -21,6 +21,23 @@ def schema(case_id: str, schema_id: str, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get("/report")
+def report(case_id: str, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
+    organization_id = current_user.organization_id
+    if not get_case(db, case_id, organization_id=organization_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    outcomes = list_service_outcomes(db, case_id, organization_id=organization_id)
+    scores = [item["gas_score"] for item in outcomes if item.get("gas_score") is not None]
+    return {
+        "case_id": case_id,
+        "outcome_count": len(outcomes),
+        "gas_score_count": len(scores),
+        "latest_gas_score": scores[-1] if scores else None,
+        "manual_only": True,
+        "items": outcomes,
+    }
+
+
 @router.get("")
 def index(case_id: str, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
