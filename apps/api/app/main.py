@@ -5,6 +5,7 @@ from app.db.seed import seed_demo_data
 from app.db.session import SessionLocal, init_db
 from app.routers.ai import router as ai_router
 from app.routers.assessments import router as assessments_router
+from app.routers.auth import router as auth_router
 from app.routers.cases import router as cases_router
 from app.routers.clients import router as clients_router
 from app.routers.demo import router as demo_router
@@ -18,7 +19,7 @@ from app.routers.timeline import router as timeline_router
 app = FastAPI(
     title="CaseBridge API",
     description="CaseBridge social-work case-service API.",
-    version="0.1.10-assessment-outcome-tracking",
+    version="0.1.11-auth-rbac-hardening",
 )
 
 app.add_middleware(
@@ -38,6 +39,7 @@ def bootstrap_database() -> None:
 
 
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(demo_router, prefix="/api/v1")
 app.include_router(clients_router, prefix="/api/v1")
 app.include_router(cases_router, prefix="/api/v1")
@@ -54,6 +56,6 @@ app.include_router(ai_router, prefix="/api/v1")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.10-assessment-outcome-tracking",
-        "rule": "Assessment schema and outcome tracking remain human-controlled.",
+        "version": "0.1.11-auth-rbac-hardening",
+        "rule": "Write actions require JWT role gates; AI remains draft-only.",
     }
