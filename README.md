@@ -39,11 +39,13 @@
 | [`docs/research/iteration-005.md`](docs/research/iteration-005.md) | 第五轮：case UI / resource matching panel 调研 |
 | [`docs/research/iteration-006.md`](docs/research/iteration-006.md) | 第六轮：service goal / resource link / agreement gate 调研 |
 | [`docs/research/iteration-007.md`](docs/research/iteration-007.md) | 第七轮：AI review workflow / human feedback 调研 |
+| [`docs/research/iteration-008.md`](docs/research/iteration-008.md) | 第八轮：AI intake implementation 调研 |
 | [`docs/seeds/demo-flow.md`](docs/seeds/demo-flow.md) | C-0001 演示闭环 |
 | [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 | [`docs/development/v0.1.3-ui-checklist.md`](docs/development/v0.1.3-ui-checklist.md) | v0.1.3 UI 手动验收清单 |
 | [`docs/development/v0.1.4-checklist.md`](docs/development/v0.1.4-checklist.md) | v0.1.4 手动 gate 验收清单 |
 | [`docs/development/v0.1.5-checklist.md`](docs/development/v0.1.5-checklist.md) | v0.1.5 timeline/audit 验收清单 |
+| [`docs/development/v0.1.6-checklist.md`](docs/development/v0.1.6-checklist.md) | v0.1.6 AI intake gate 验收清单 |
 
 四份核心文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
 
@@ -112,7 +114,8 @@
 - [x] v0.1.4 manual goal/link gate：service-goal API/UI、resource-link API/UI、agreement-state gate 已完成
 - [x] v0.1.5 backend timeline/audit：AuditEvent model、audit writes、unified timeline API 已完成
 - [x] v0.1.5 web unified timeline page：`/clients/c-0001/timeline` 独立页面已完成
+- [x] v0.1.6 AI intake gate：AiTask/AiOutput、mock provider、draft/review API、AI review page 已完成
 - [ ] CI 结果待确认：GitHub Actions API smoke + Web build 需要查看运行结果
-- [ ] 下一节点：确认 CI 后进入 AI intake gate
+- [ ] 下一节点：provider abstraction / prompt registry / stronger redaction
 
-> **下一步**：确认 CI；然后进入 `v0.1.6-ai-intake-gate`，新增 `ai_tasks` / `ai_outputs` / mock provider / human review。
+> **下一步**：确认 CI；然后进入 provider abstraction、prompt registry 和更强 redaction 设计。在这些完成前，不接真实外部模型。
