@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.assessment_catalog import get_schema
+from app.core.auth import RequireCaseWriter
 from app.db.outcome_repository import create_service_outcome, list_service_outcomes
 from app.db.persistent_repository import get_case
 from app.db.session import get_db
@@ -28,11 +29,12 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("")
-def create(case_id: str, payload: CreateServiceOutcomeRequest, db: Session = Depends(get_db)) -> dict:
-    if not get_case(db, case_id):
+def create(case_id: str, payload: CreateServiceOutcomeRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
+    organization_id = current_user.organization_id
+    if not get_case(db, case_id, organization_id=organization_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
-        outcome = create_service_outcome(db, case_id, payload.model_dump())
+        outcome = create_service_outcome(db, case_id, payload.model_dump(), actor=current_user.username, organization_id=organization_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"outcome": outcome}

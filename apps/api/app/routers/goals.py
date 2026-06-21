@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import RequireCaseWriter
 from app.db.persistent_repository import create_service_goal, get_case, list_service_goals
 from app.db.session import get_db
 from app.schemas import CreateServiceGoalRequest
@@ -16,8 +17,9 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("")
-def create(case_id: str, payload: CreateServiceGoalRequest, db: Session = Depends(get_db)) -> dict:
-    if not get_case(db, case_id):
+def create(case_id: str, payload: CreateServiceGoalRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
+    organization_id = current_user.organization_id
+    if not get_case(db, case_id, organization_id=organization_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    goal = create_service_goal(db, case_id, payload.model_dump())
+    goal = create_service_goal(db, case_id, payload.model_dump(), actor=current_user.username, organization_id=organization_id)
     return {"goal": goal}

@@ -11,9 +11,24 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    username: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    display_name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(50), default="social_worker", index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class Client(Base):
     __tablename__ = "clients"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(120))
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -31,6 +46,7 @@ class Client(Base):
 class CaseRecord(Base):
     __tablename__ = "cases"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     client_code: Mapped[str] = mapped_column(ForeignKey("clients.code"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     stage: Mapped[str] = mapped_column(String(64), default="intake")
@@ -46,6 +62,7 @@ class CaseRecord(Base):
 class CaseNote(Base):
     __tablename__ = "case_notes"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     note_type: Mapped[str] = mapped_column(String(50), default="visit")
     content_raw: Mapped[str] = mapped_column(Text)
@@ -60,6 +77,7 @@ class CaseNote(Base):
 class Resource(Base):
     __tablename__ = "resources"
     code: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     name: Mapped[str] = mapped_column(String(200))
     category: Mapped[str] = mapped_column(String(80), index=True)
     match_codes: Mapped[list[str]] = mapped_column(JSON, default=list)
@@ -72,6 +90,7 @@ class Resource(Base):
 class Referral(Base):
     __tablename__ = "referrals"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     resource_code: Mapped[str] = mapped_column(ForeignKey("resources.code"), index=True)
     status: Mapped[str] = mapped_column(String(50), default="to_verify")
@@ -84,6 +103,7 @@ class Referral(Base):
 class ServiceGoal(Base):
     __tablename__ = "service_goals"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     target_state: Mapped[str] = mapped_column(Text)
@@ -95,6 +115,7 @@ class ServiceGoal(Base):
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     event_type: Mapped[str] = mapped_column(String(80), index=True)
     entity_type: Mapped[str] = mapped_column(String(80), index=True)
@@ -107,6 +128,7 @@ class AuditEvent(Base):
 class AiTask(Base):
     __tablename__ = "ai_tasks"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
     capability: Mapped[str] = mapped_column(String(80), index=True)
@@ -119,6 +141,7 @@ class AiTask(Base):
 class AiOutput(Base):
     __tablename__ = "ai_outputs"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     task_id: Mapped[str] = mapped_column(ForeignKey("ai_tasks.id"), index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
@@ -128,12 +151,16 @@ class AiOutput(Base):
     validation_status: Mapped[str] = mapped_column(String(50), default="valid")
     review_status: Mapped[str] = mapped_column(String(50), default="pending", index=True)
     reviewer_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    applied_to: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class CaseAssessment(Base):
     __tablename__ = "case_assessments"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     source_note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
     source_ai_output_id: Mapped[str] = mapped_column(ForeignKey("ai_outputs.id"), index=True)
@@ -149,6 +176,7 @@ class CaseAssessment(Base):
 class ServiceOutcome(Base):
     __tablename__ = "service_outcomes"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     goal_id: Mapped[str | None] = mapped_column(ForeignKey("service_goals.id"), nullable=True, index=True)
     assessment_id: Mapped[str | None] = mapped_column(ForeignKey("case_assessments.id"), nullable=True, index=True)

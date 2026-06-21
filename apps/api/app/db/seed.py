@@ -3,10 +3,40 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import CaseNote, CaseRecord, Client, Resource
+from app.core.auth import hash_password
+from app.db.models import CaseNote, CaseRecord, Client, Resource, User
+
+DEMO_SOCIAL_WORKER_PASSWORD = "casebridge_demo_password"
+DEMO_ADMIN_PASSWORD = "casebridge_admin_password"
+
+
+def seed_demo_users(db: Session) -> None:
+    if db.scalar(select(User).where(User.username == "demo_social_worker")):
+        return
+    db.add_all(
+        [
+            User(
+                username="demo_social_worker",
+                email="social_worker@example.invalid",
+                password_hash=hash_password(DEMO_SOCIAL_WORKER_PASSWORD),
+                display_name="Demo Social Worker",
+                role="social_worker",
+            ),
+            User(
+                username="demo_admin",
+                email="admin@example.invalid",
+                password_hash=hash_password(DEMO_ADMIN_PASSWORD),
+                display_name="Demo Admin",
+                role="admin",
+            ),
+        ]
+    )
+    db.commit()
 
 
 def seed_demo_data(db: Session) -> None:
+    seed_demo_users(db)
+
     existing = db.scalar(select(Client).where(Client.code == "C-0001"))
     if existing:
         return

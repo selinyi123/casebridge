@@ -24,4 +24,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run smoke tests
-        run: pytest -q
+        run: |
+          set -o pipefail
+          pytest -q --tb=short --junitxml=pytest-smoke-results.xml 2>&1 | tee pytest-smoke.log
+      - name: Upload smoke test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-smoke-logs
+          path: |
+            apps/api/pytest-smoke.log
+            apps/api/pytest-smoke-results.xml
