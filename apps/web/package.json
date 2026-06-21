@@ -1,6 +1,6 @@
 {
   "name": "casebridge-web",
-  "version": "0.1.1-foundation-build",
+  "version": "0.1.3-ui-case-loop",
   "private": true,
   "scripts": {
     "dev": "next dev",
