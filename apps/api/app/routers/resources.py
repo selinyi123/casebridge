@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.demo_store import TAG_CATALOG
 from app.core.resource_match import match_resources
-from app.db.repository import list_resources
+from app.db.persistent_repository import list_resources
 from app.db.session import get_db
 from app.schemas import ResourceMatchRequest
 
