@@ -12,6 +12,7 @@ export default function AiIntakePage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [outputs, setOutputs] = useState<AiOutput[]>([]);
   const [preview, setPreview] = useState<ApplyPreview | null>(null);
+  const [responsibilityAccepted, setResponsibilityAccepted] = useState(false);
   const [status, setStatus] = useState("Loading AI review gate...");
 
   async function loadData() {
@@ -34,6 +35,7 @@ export default function AiIntakePage() {
       return;
     }
     setPreview(null);
+    setResponsibilityAccepted(false);
     await loadData();
     setStatus("Draft created in ai_outputs with review_status=pending.");
   }
@@ -49,6 +51,7 @@ export default function AiIntakePage() {
       return;
     }
     setPreview(null);
+    setResponsibilityAccepted(false);
     await loadData();
     setStatus(`Draft marked as ${reviewStatus}. Formal case fields were not changed.`);
   }
@@ -61,7 +64,24 @@ export default function AiIntakePage() {
     }
     const payload = await response.json();
     setPreview(payload.preview);
+    setResponsibilityAccepted(false);
     setStatus("Apply preview created. It does not write formal case fields.");
+  }
+
+  async function applyToAssessment(outputId: string) {
+    const response = await fetch(`${API_BASE}/api/v1/cases/CASE-0001/ai/outputs/${outputId}/apply-to-assessment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewer_responsibility_accepted: responsibilityAccepted, reviewer_id: "demo_social_worker" }),
+    });
+    if (!response.ok) {
+      setStatus("Apply blocked. Responsibility confirmation and accepted/modified review are required.");
+      return;
+    }
+    setPreview(null);
+    setResponsibilityAccepted(false);
+    await loadData();
+    setStatus("AI draft explicitly applied to formal assessment target.");
   }
 
   useEffect(() => {
@@ -95,6 +115,7 @@ export default function AiIntakePage() {
               <button onClick={() => reviewOutput(output.id, "accepted")} style={{ marginRight: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>Accept draft</button>
               <button onClick={() => reviewOutput(output.id, "rejected")} style={{ marginRight: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>Reject draft</button>
               <button onClick={() => createPreview(output.id)} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>Create apply preview</button>
+              <button onClick={() => applyToAssessment(output.id)} style={{ marginLeft: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>Apply to assessment</button>
             </article>
           ))}
         </div>
@@ -102,7 +123,10 @@ export default function AiIntakePage() {
       {preview ? (
         <section style={{ border: "1px solid #ddd", borderRadius: 14, padding: 16, marginTop: 20 }}>
           <h2>Apply preview</h2>
-          <p>This preview does not write formal case fields. A separate explicit apply action is still required.</p>
+          <p>This preview does not write formal case fields. Applying requires explicit responsibility confirmation.</p>
+          <label style={{ display: "block", marginBottom: 12 }}>
+            <input type="checkbox" checked={responsibilityAccepted} onChange={(event) => setResponsibilityAccepted(event.target.checked)} /> I reviewed this draft and accept responsibility for applying it.
+          </label>
           <pre style={{ whiteSpace: "pre-wrap", background: "#f6f6f6", padding: 10, borderRadius: 8 }}>{JSON.stringify(preview, null, 2)}</pre>
         </section>
       ) : null}
