@@ -19,7 +19,13 @@ def test_service_plan_repository_builds_manual_evidence_chain() -> None:
             1,
         )
         chain = build_evidence_chain(db, "CASE-0001", 1)
+        event_ids = {item["id"] for item in chain["events"]}
+        event_kinds = {item["kind"] for item in chain["events"]}
 
         assert chain["manual_only"] is True
         assert plan["id"] in {item["id"] for item in chain["plans"]}
         assert intervention["id"] in {item["id"] for item in chain["interventions"]}
+        assert plan["id"] in event_ids
+        assert intervention["id"] in event_ids
+        assert "service_plan" in event_kinds
+        assert "service_intervention" in event_kinds
