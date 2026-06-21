@@ -43,6 +43,16 @@ class ApplyAiOutputRequest(BaseModel):
     reviewer_id: str = Field(default="demo_social_worker", min_length=1, max_length=120)
 
 
+class CreateServiceOutcomeRequest(BaseModel):
+    goal_id: str | None = Field(default=None, max_length=40)
+    assessment_id: str | None = Field(default=None, max_length=40)
+    outcome_type: str = Field(default="goal_attainment", pattern="^(goal_attainment|followup_observation|resource_result)$")
+    gas_score: int | None = Field(default=None, ge=-2, le=2)
+    narrative: str = Field(min_length=1, max_length=3000)
+    evidence: str | None = Field(default=None, max_length=3000)
+    recorded_by: str = Field(default="demo_social_worker", min_length=1, max_length=120)
+
+
 class IntakeDraftOutput(BaseModel):
     needs: list[str] = Field(default_factory=list)
     risk_clues: list[str] = Field(default_factory=list)
