@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.demo_store import create_case_note, get_case, list_case_notes, list_cases
 from app.core.privacy import redact_text
+from app.schemas import CreateCaseNoteRequest
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -27,17 +28,25 @@ def notes(case_id: str) -> dict:
 
 
 @router.post("/{case_id}/notes")
-def create_note(case_id: str, payload: dict) -> dict:
+def create_note(case_id: str, payload: CreateCaseNoteRequest) -> dict:
     if not get_case(case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    raw = str(payload.get("content_raw", "")).strip()
-    if not raw:
-        raise HTTPException(status_code=400, detail="content_raw_required")
+    raw = payload.content_raw.strip()
     redacted = redact_text(raw)
     note = create_case_note(
         case_id=case_id,
-        payload={**payload, "content_raw": raw},
+        payload={
+            "note_type": payload.note_type,
+            "content_raw": raw,
+            "occurred_at": payload.occurred_at,
+        },
         content_clean=redacted.clean_text,
         pii_detected=bool(redacted.pii_hits),
     )
-    return {"note": note, "redaction": {"pii_hits": redacted.pii_hits, "is_safe_for_model": redacted.is_safe_for_model}}
+    return {
+        "note": note,
+        "redaction": {
+            "pii_hits": redacted.pii_hits,
+            "is_safe_for_model": redacted.is_safe_for_model,
+        },
+    }
