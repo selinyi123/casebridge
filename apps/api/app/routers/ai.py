@@ -5,6 +5,7 @@ from app.ai.prompt_registry import get_prompt_spec
 from app.ai.provider_registry import generate_with_provider
 from app.ai.redaction_gateway import run_redaction_gate
 from app.db.persistent_repository import (
+    apply_ai_output_to_assessment,
     create_ai_intake_output,
     create_apply_preview,
     get_case,
@@ -13,7 +14,7 @@ from app.db.persistent_repository import (
     review_ai_output,
 )
 from app.db.session import get_db
-from app.schemas import GenerateAiIntakeRequest, ReviewAiOutputRequest
+from app.schemas import ApplyAiOutputRequest, GenerateAiIntakeRequest, ReviewAiOutputRequest
 
 router = APIRouter(prefix="/cases/{case_id}/ai", tags=["ai"])
 DEFAULT_PROMPT_VERSION = "intake-v0.1.7"
@@ -82,3 +83,21 @@ def apply_preview(case_id: str, output_id: str, db: Session = Depends(get_db)) -
     if not preview or preview.get("case_id") != case_id:
         raise HTTPException(status_code=404, detail="ai_output_not_found")
     return {"preview": preview}
+
+
+@router.post("/outputs/{output_id}/apply-to-assessment")
+def apply_to_assessment(case_id: str, output_id: str, payload: ApplyAiOutputRequest, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    try:
+        assessment = apply_ai_output_to_assessment(
+            db,
+            output_id=output_id,
+            reviewer_id=payload.reviewer_id,
+            responsibility_accepted=payload.reviewer_responsibility_accepted,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not assessment or assessment.get("case_id") != case_id:
+        raise HTTPException(status_code=404, detail="ai_output_not_found")
+    return {"assessment": assessment}
