@@ -173,6 +173,19 @@ class CaseAssessment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class CaseAssessmentVersion(Base):
+    __tablename__ = "case_assessment_versions"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("case_assessments.id"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer, index=True)
+    version_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    reason: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class ServiceOutcome(Base):
     __tablename__ = "service_outcomes"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
