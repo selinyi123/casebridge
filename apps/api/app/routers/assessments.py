@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import RequireAdmin, RequireCaseWriter
 from app.db.assessment_revision_repository import create_assessment_correction, list_assessment_corrections
+from app.db.assessment_version_repository import create_version, list_versions
 from app.db.persistent_repository import get_case, list_case_assessments
 from app.db.session import get_db
 
@@ -15,11 +16,34 @@ class AssessmentCorrectionRequest(BaseModel):
     correction_data: dict = Field(default_factory=dict)
 
 
+class AssessmentVersionRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=1000)
+    version_data: dict = Field(default_factory=dict)
+
+
 @router.get("")
 def index(case_id: str, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     return {"items": list_case_assessments(db, case_id)}
+
+
+@router.get("/{assessment_id}/versions")
+def versions(case_id: str, assessment_id: str, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id, organization_id=current_user.organization_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    return {"items": list_versions(db, case_id, assessment_id, current_user.organization_id)}
+
+
+@router.post("/{assessment_id}/versions")
+def create_assessment_version(case_id: str, assessment_id: str, payload: AssessmentVersionRequest, current_user: RequireAdmin, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id, organization_id=current_user.organization_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    try:
+        version = create_version(db, case_id, assessment_id, payload.version_data, payload.reason, current_user.username, current_user.organization_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"version": version}
 
 
 @router.get("/{assessment_id}/corrections")
