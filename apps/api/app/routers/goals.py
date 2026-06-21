@@ -18,7 +18,8 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 @router.post("")
 def create(case_id: str, payload: CreateServiceGoalRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
-    if not get_case(db, case_id):
+    organization_id = current_user.organization_id
+    if not get_case(db, case_id, organization_id=organization_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    goal = create_service_goal(db, case_id, payload.model_dump(), actor=current_user.username)
+    goal = create_service_goal(db, case_id, payload.model_dump(), actor=current_user.username, organization_id=organization_id)
     return {"goal": goal}
