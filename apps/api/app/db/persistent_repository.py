@@ -99,16 +99,7 @@ def record_audit_event(
     payload: dict[str, Any] | None = None,
     actor: str = "demo_social_worker",
 ) -> None:
-    db.add(
-        AuditEvent(
-            case_id=case_id,
-            event_type=event_type,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            payload=payload or {},
-            actor=actor,
-        )
-    )
+    db.add(AuditEvent(case_id=case_id, event_type=event_type, entity_type=entity_type, entity_id=entity_id, payload=payload or {}, actor=actor))
 
 
 def list_clients(db: Session) -> list[dict[str, Any]]:
@@ -142,7 +133,7 @@ def list_case_notes(db: Session, case_id: str, include_raw: bool = False) -> lis
     return [_serialize_note(row, include_raw=include_raw) for row in db.scalars(stmt).all()]
 
 
-def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content_clean: str, pii_detected: bool) -> dict[str, Any]:
+def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content_clean: str, pii_detected: bool, actor: str = "demo_social_worker") -> dict[str, Any]:
     note_id = _next_id("NOTE", _note_counter, CaseNote, db)
     note = CaseNote(
         id=note_id,
@@ -155,7 +146,7 @@ def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content
         source="human",
     )
     db.add(note)
-    record_audit_event(db, case_id, "note.created", "case_note", note_id, {"note_type": note.note_type, "pii_detected": pii_detected})
+    record_audit_event(db, case_id, "note.created", "case_note", note_id, {"note_type": note.note_type, "pii_detected": pii_detected}, actor=actor)
     db.commit()
     db.refresh(note)
     return _serialize_note(note, include_raw=False)
@@ -175,7 +166,7 @@ def list_service_goals(db: Session, case_id: str) -> list[dict[str, Any]]:
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def create_service_goal(db: Session, case_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+def create_service_goal(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker") -> dict[str, Any]:
     goal = ServiceGoal(
         id=_next_id("GOAL", _goal_counter, ServiceGoal, db),
         case_id=case_id,
@@ -184,7 +175,7 @@ def create_service_goal(db: Session, case_id: str, payload: dict[str, Any]) -> d
         status=payload.get("status", "not_started"),
     )
     db.add(goal)
-    record_audit_event(db, case_id, "goal.created", "service_goal", goal.id, {"status": goal.status})
+    record_audit_event(db, case_id, "goal.created", "service_goal", goal.id, {"status": goal.status}, actor=actor)
     db.commit()
     db.refresh(goal)
     return model_to_dict(goal)
@@ -195,7 +186,7 @@ def list_referrals(db: Session, case_id: str) -> list[dict[str, Any]]:
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def create_referral(db: Session, case_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+def create_referral(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker") -> dict[str, Any]:
     referral = Referral(
         id=_next_id("REF", _referral_counter, Referral, db),
         case_id=case_id,
@@ -212,13 +203,14 @@ def create_referral(db: Session, case_id: str, payload: dict[str, Any]) -> dict[
         "resource_link",
         referral.id,
         {"resource_code": referral.resource_code, "agreement_status": referral.agreement_status},
+        actor=actor,
     )
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
 
 
-def update_referral_status(db: Session, case_id: str, referral_id: str, status: str, agreement_status: str | None = None) -> dict[str, Any] | None:
+def update_referral_status(db: Session, case_id: str, referral_id: str, status: str, agreement_status: str | None = None, actor: str = "demo_social_worker") -> dict[str, Any] | None:
     referral = db.scalar(select(Referral).where(Referral.id == referral_id, Referral.case_id == case_id))
     if not referral:
         return None
@@ -237,13 +229,14 @@ def update_referral_status(db: Session, case_id: str, referral_id: str, status: 
         "resource_link",
         referral.id,
         {"from": previous_status, "to": status, "agreement_status": next_agreement},
+        actor=actor,
     )
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
 
 
-def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_output: dict[str, Any], provider: str, prompt_version: str) -> dict[str, Any]:
+def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_output: dict[str, Any], provider: str, prompt_version: str, actor: str = "demo_social_worker") -> dict[str, Any]:
     parsed_output = _validate_intake_payload(parsed_output)
     task = AiTask(
         id=_next_id("AITASK", _ai_task_counter, AiTask, db),
@@ -274,6 +267,7 @@ def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_outp
         "ai_output",
         output.id,
         {"task_id": task.id, "provider": task.provider, "prompt_version": task.prompt_version, "review_status": output.review_status},
+        actor=actor,
     )
     db.commit()
     db.refresh(output)
@@ -324,7 +318,7 @@ def review_ai_output(
     return model_to_dict(output)
 
 
-def create_apply_preview(db: Session, case_id: str, output_id: str) -> dict[str, Any] | None:
+def create_apply_preview(db: Session, case_id: str, output_id: str, actor: str = "demo_social_worker") -> dict[str, Any] | None:
     output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id))
     if not output:
         return None
@@ -342,7 +336,7 @@ def create_apply_preview(db: Session, case_id: str, output_id: str) -> dict[str,
         "will_write_formal_fields": False,
         "requires_explicit_apply_action": True,
     }
-    record_audit_event(db, output_dict["case_id"], "ai.apply_preview.created", "ai_output", output_dict["id"], {"review_status": output_dict["review_status"]})
+    record_audit_event(db, output_dict["case_id"], "ai.apply_preview.created", "ai_output", output_dict["id"], {"review_status": output_dict["review_status"]}, actor=actor)
     db.commit()
     return preview
 
