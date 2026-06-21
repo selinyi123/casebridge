@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import RequireCaseWriter
 from app.db.persistent_repository import (
     create_referral,
     get_case,
@@ -22,17 +23,17 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("")
-def create(case_id: str, payload: CreateReferralRequest, db: Session = Depends(get_db)) -> dict:
+def create(case_id: str, payload: CreateReferralRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     if not get_resource(db, payload.resource_code):
         raise HTTPException(status_code=404, detail="resource_not_found")
-    referral = create_referral(db, case_id, payload.model_dump())
+    referral = create_referral(db, case_id, payload.model_dump(), actor=current_user.username)
     return {"referral": referral}
 
 
 @router.patch("/{referral_id}/status")
-def update_status(case_id: str, referral_id: str, payload: UpdateReferralStatusRequest, db: Session = Depends(get_db)) -> dict:
+def update_status(case_id: str, referral_id: str, payload: UpdateReferralStatusRequest, current_user: RequireCaseWriter, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
@@ -42,6 +43,7 @@ def update_status(case_id: str, referral_id: str, payload: UpdateReferralStatusR
             referral_id=referral_id,
             status=payload.status,
             agreement_status=payload.agreement_status,
+            actor=current_user.username,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
