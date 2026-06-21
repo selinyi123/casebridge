@@ -145,8 +145,7 @@ def test_golden_fixture_for_mock_intake_provider() -> None:
 
 
 def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
-    notes = client.get("/api/v1/cases/CASE-0001/notes").json()["items"]
-    note_id = notes[0]["id"]
+    note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
     response = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id})
     assert response.status_code == 200
     payload = response.json()
@@ -162,16 +161,10 @@ def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
 def test_ai_output_review_updates_review_status_only(client: TestClient) -> None:
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
     output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    review_response = client.patch(
-        f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review",
-        json={"review_status": "accepted", "reviewer_notes": "manual review completed"},
-    )
+    review_response = client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted", "reviewer_notes": "manual review completed"})
     assert review_response.status_code == 200
-    reviewed = review_response.json()["output"]
-    assert reviewed["review_status"] == "accepted"
-    case_response = client.get("/api/v1/cases/CASE-0001")
-    assert case_response.status_code == 200
-    assert "ai_outputs" not in case_response.json()["case"]
+    assert review_response.json()["output"]["review_status"] == "accepted"
+    assert "ai_outputs" not in client.get("/api/v1/cases/CASE-0001").json()["case"]
 
 
 def test_apply_preview_requires_reviewed_ai_output(client: TestClient) -> None:
@@ -187,17 +180,34 @@ def test_apply_preview_requires_reviewed_ai_output(client: TestClient) -> None:
     assert preview["requires_explicit_apply_action"] is True
 
 
-def test_timeline_contains_ai_output_and_review_audit(client: TestClient) -> None:
+def test_explicit_apply_to_assessment_requires_review_and_responsibility(client: TestClient) -> None:
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
     output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "rejected"})
+    blocked_pending = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True})
+    assert blocked_pending.status_code == 409
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
+    blocked_responsibility = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": False})
+    assert blocked_responsibility.status_code == 409
+    applied = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True, "reviewer_id": "demo_social_worker"})
+    assert applied.status_code == 200
+    assessment = applied.json()["assessment"]
+    assert assessment["source_ai_output_id"] == output["id"]
+    assert assessment["reviewer_responsibility_accepted"] is True
+    assert assessment["provider"] == "mock"
+    assert assessment["prompt_version"] == "intake-v0.1.7"
+    assessments = client.get("/api/v1/cases/CASE-0001/assessments").json()["items"]
+    assert assessment["id"] in {item["id"] for item in assessments}
+
+
+def test_timeline_contains_assessment_and_apply_audit(client: TestClient) -> None:
+    note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
+    client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True})
     timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
     assert timeline_response.status_code == 200
     items = timeline_response.json()["items"]
     kinds = {item["kind"] for item in items}
-    audit_payloads = [item["payload"]["payload"] for item in items if item["kind"] == "audit"]
     audit_titles = {item["title"] for item in items if item["kind"] == "audit"}
-    assert "ai_output" in kinds
-    assert "ai.intake_draft.created" in audit_titles
-    assert "ai.output.reviewed" in audit_titles
-    assert any(payload.get("prompt_version") == "intake-v0.1.7" for payload in audit_payloads)
+    assert "assessment" in kinds
+    assert "ai.output.applied_to_assessment" in audit_titles
