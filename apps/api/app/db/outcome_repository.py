@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, CaseAssessment, ServiceGoal, ServiceOutcome, model_to_dict
+from app.db.models import AuditEvent, CaseAssessment, CaseRecord, ServiceGoal, ServiceOutcome, model_to_dict
 
 _outcome_counter = count(1)
 DEFAULT_ORGANIZATION_ID = 1
@@ -17,12 +17,20 @@ def _next_id(prefix: str, counter: count, model: type, db: Session) -> str:
     return identifier
 
 
+def _ensure_case_exists(db: Session, case_id: str, organization_id: int) -> None:
+    exists = db.scalar(select(CaseRecord.id).where(CaseRecord.id == case_id, CaseRecord.organization_id == organization_id))
+    if not exists:
+        raise ValueError("case_not_found")
+
+
 def list_service_outcomes(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
     stmt = select(ServiceOutcome).where(ServiceOutcome.case_id == case_id, ServiceOutcome.organization_id == organization_id).order_by(ServiceOutcome.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
 def create_service_outcome(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any]:
+    _ensure_case_exists(db, case_id, organization_id)
+
     gas_score = payload.get("gas_score")
     if gas_score is not None and (gas_score < -2 or gas_score > 2):
         raise ValueError("gas_score_out_of_range")
