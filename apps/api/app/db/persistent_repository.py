@@ -5,7 +5,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import CaseNote, CaseRecord, Client, Referral, Resource, ServiceGoal, model_to_dict, utc_now
+from app.db.models import AuditEvent, CaseNote, CaseRecord, Client, Referral, Resource, ServiceGoal, model_to_dict, utc_now
 
 _note_counter = count(2)
 _goal_counter = count(1)
@@ -32,6 +32,18 @@ def _next_id(prefix: str, counter: count, model: type, db: Session) -> str:
 def assert_referral_transition_allowed(status: str, agreement_status: str) -> None:
     if status in BLOCKED_REFERRAL_STATUSES and agreement_status not in VALID_AGREEMENT_STATUSES:
         raise ValueError("agreement_required_for_referral_status")
+
+
+def record_audit_event(db: Session, case_id: str, event_type: str, entity_type: str, entity_id: str, payload: dict[str, Any] | None = None) -> None:
+    db.add(
+        AuditEvent(
+            case_id=case_id,
+            event_type=event_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            payload=payload or {},
+        )
+    )
 
 
 def list_clients(db: Session) -> list[dict[str, Any]]:
@@ -73,6 +85,7 @@ def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content
         source="human",
     )
     db.add(note)
+    record_audit_event(db, case_id, "note.created", "case_note", note_id, {"note_type": note.note_type, "pii_detected": pii_detected})
     db.commit()
     db.refresh(note)
     return model_to_dict(note)
@@ -101,6 +114,7 @@ def create_service_goal(db: Session, case_id: str, payload: dict[str, Any]) -> d
         status=payload.get("status", "not_started"),
     )
     db.add(goal)
+    record_audit_event(db, case_id, "goal.created", "service_goal", goal.id, {"status": goal.status})
     db.commit()
     db.refresh(goal)
     return model_to_dict(goal)
@@ -121,6 +135,7 @@ def create_referral(db: Session, case_id: str, payload: dict[str, Any]) -> dict[
         notes=payload.get("notes"),
     )
     db.add(referral)
+    record_audit_event(db, case_id, "resource_link.created", "resource_link", referral.id, {"resource_code": referral.resource_code, "agreement_status": referral.agreement_status})
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
@@ -135,6 +150,25 @@ def update_referral_status(db: Session, referral_id: str, status: str, agreement
     referral.status = status
     referral.agreement_status = next_agreement
     db.add(referral)
+    record_audit_event(db, referral.case_id, "resource_link.status_changed", "resource_link", referral.id, {"status": status, "agreement_status": next_agreement})
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
+
+
+def list_audit_events(db: Session, case_id: str) -> list[dict[str, Any]]:
+    stmt = select(AuditEvent).where(AuditEvent.case_id == case_id).order_by(AuditEvent.created_at)
+    return [model_to_dict(row) for row in db.scalars(stmt).all()]
+
+
+def list_case_timeline(db: Session, case_id: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for note in list_case_notes(db, case_id):
+        events.append({"kind": "note", "id": note["id"], "at": note["occurred_at"], "title": note["note_type"], "payload": note})
+    for goal in list_service_goals(db, case_id):
+        events.append({"kind": "goal", "id": goal["id"], "at": goal["created_at"], "title": goal["title"], "payload": goal})
+    for link in list_referrals(db, case_id):
+        events.append({"kind": "resource_link", "id": link["id"], "at": link["created_at"], "title": link["resource_code"], "payload": link})
+    for audit in list_audit_events(db, case_id):
+        events.append({"kind": "audit", "id": str(audit["id"]), "at": audit["created_at"], "title": audit["event_type"], "payload": audit})
+    return sorted(events, key=lambda item: item["at"])
