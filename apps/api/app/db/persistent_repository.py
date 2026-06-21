@@ -5,13 +5,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AiOutput, AiTask, AuditEvent, CaseNote, CaseRecord, Client, Referral, Resource, ServiceGoal, model_to_dict, utc_now
+from app.db.models import AiOutput, AiTask, AuditEvent, CaseAssessment, CaseNote, CaseRecord, Client, Referral, Resource, ServiceGoal, model_to_dict, utc_now
 
 _note_counter = count(2)
 _goal_counter = count(1)
 _referral_counter = count(1)
 _ai_task_counter = count(1)
 _ai_output_counter = count(1)
+_assessment_counter = count(1)
 BLOCKED_REFERRAL_STATUSES = {"referred", "success", "completed"}
 VALID_AGREEMENT_STATUSES = {"verbal", "written"}
 APPLYABLE_REVIEW_STATUSES = {"accepted", "modified"}
@@ -191,6 +192,46 @@ def create_apply_preview(db: Session, output_id: str) -> dict[str, Any] | None:
     return preview
 
 
+def list_case_assessments(db: Session, case_id: str) -> list[dict[str, Any]]:
+    stmt = select(CaseAssessment).where(CaseAssessment.case_id == case_id).order_by(CaseAssessment.created_at)
+    return [model_to_dict(row) for row in db.scalars(stmt).all()]
+
+
+def apply_ai_output_to_assessment(db: Session, output_id: str, reviewer_id: str, responsibility_accepted: bool) -> dict[str, Any] | None:
+    if not responsibility_accepted:
+        raise ValueError("reviewer_responsibility_required")
+    output = db.get(AiOutput, output_id)
+    if not output:
+        return None
+    if output.review_status not in APPLYABLE_REVIEW_STATUSES:
+        raise ValueError("ai_output_not_reviewed_for_apply")
+    task = db.get(AiTask, output.task_id)
+    assessment = CaseAssessment(
+        id=_next_id("ASSESS", _assessment_counter, CaseAssessment, db),
+        case_id=output.case_id,
+        source_note_id=output.note_id,
+        source_ai_output_id=output.id,
+        provider=task.provider if task else "unknown",
+        prompt_version=task.prompt_version if task else "unknown",
+        assessment_type=output.output_type,
+        assessment_data=output.parsed_output,
+        reviewer_id=reviewer_id,
+        reviewer_responsibility_accepted=responsibility_accepted,
+    )
+    db.add(assessment)
+    record_audit_event(
+        db,
+        output.case_id,
+        "ai.output.applied_to_assessment",
+        "case_assessment",
+        assessment.id,
+        {"ai_output_id": output.id, "note_id": output.note_id, "provider": assessment.provider, "prompt_version": assessment.prompt_version, "reviewer_id": reviewer_id},
+    )
+    db.commit()
+    db.refresh(assessment)
+    return model_to_dict(assessment)
+
+
 def list_audit_events(db: Session, case_id: str) -> list[dict[str, Any]]:
     stmt = select(AuditEvent).where(AuditEvent.case_id == case_id).order_by(AuditEvent.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
@@ -204,6 +245,8 @@ def list_case_timeline(db: Session, case_id: str) -> list[dict[str, Any]]:
         events.append({"kind": "goal", "id": goal["id"], "at": goal["created_at"], "title": goal["title"], "payload": goal})
     for link in list_referrals(db, case_id):
         events.append({"kind": "resource_link", "id": link["id"], "at": link["created_at"], "title": link["resource_code"], "payload": link})
+    for assessment in list_case_assessments(db, case_id):
+        events.append({"kind": "assessment", "id": assessment["id"], "at": assessment["created_at"], "title": assessment["assessment_type"], "payload": assessment})
     for ai_output in list_ai_outputs(db, case_id):
         events.append({"kind": "ai_output", "id": ai_output["id"], "at": ai_output["created_at"], "title": ai_output["output_type"], "payload": ai_output})
     for audit in list_audit_events(db, case_id):
