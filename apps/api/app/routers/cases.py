@@ -1,39 +1,42 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from app.core.demo_store import create_case_note, get_case, list_case_notes, list_cases
 from app.core.privacy import redact_text
+from app.db.repository import create_case_note, get_case, list_case_notes, list_cases
+from app.db.session import get_db
 from app.schemas import CreateCaseNoteRequest
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
 
 @router.get("")
-def index() -> dict:
-    return {"items": list_cases()}
+def index(db: Session = Depends(get_db)) -> dict:
+    return {"items": list_cases(db)}
 
 
 @router.get("/{case_id}")
-def show(case_id: str) -> dict:
-    case = get_case(case_id)
+def show(case_id: str, db: Session = Depends(get_db)) -> dict:
+    case = get_case(db, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="case_not_found")
-    return {"case": case, "notes": list_case_notes(case_id)}
+    return {"case": case, "notes": list_case_notes(db, case_id)}
 
 
 @router.get("/{case_id}/notes")
-def notes(case_id: str) -> dict:
-    if not get_case(case_id):
+def notes(case_id: str, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    return {"items": list_case_notes(case_id)}
+    return {"items": list_case_notes(db, case_id)}
 
 
 @router.post("/{case_id}/notes")
-def create_note(case_id: str, payload: CreateCaseNoteRequest) -> dict:
-    if not get_case(case_id):
+def create_note(case_id: str, payload: CreateCaseNoteRequest, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     raw = payload.content_raw.strip()
     redacted = redact_text(raw)
     note = create_case_note(
+        db=db,
         case_id=case_id,
         payload={
             "note_type": payload.note_type,
