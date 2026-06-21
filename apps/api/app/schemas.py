@@ -3,6 +3,26 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+    role: str
+    organization_id: int
+
+
+class CurrentUserResponse(BaseModel):
+    username: str
+    display_name: str
+    role: str
+    organization_id: int
+
+
 class CreateCaseNoteRequest(BaseModel):
     note_type: str = Field(default="visit", min_length=1, max_length=50)
     content_raw: str = Field(min_length=1, max_length=5000)
