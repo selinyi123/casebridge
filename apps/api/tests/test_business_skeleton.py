@@ -88,3 +88,53 @@ def test_redactor_masks_long_digit_run(client: TestClient) -> None:
     payload = response.json()
     assert "[REDACTED_PHONE]" in payload["note"]["content_clean"]
     assert payload["note"]["pii_detected"] is True
+
+
+def test_create_service_goal(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/cases/CASE-0001/goals",
+        json={"title": "建立稳定餐食支持", "target_state": "完成助餐资源核实并形成跟进安排"},
+    )
+    assert response.status_code == 200
+    goal = response.json()["goal"]
+    assert goal["case_id"] == "CASE-0001"
+    assert goal["status"] == "not_started"
+
+    list_response = client.get("/api/v1/cases/CASE-0001/goals")
+    assert list_response.status_code == 200
+    goal_ids = {item["id"] for item in list_response.json()["items"]}
+    assert goal["id"] in goal_ids
+
+
+def test_create_resource_link_candidate(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/cases/CASE-0001/referrals",
+        json={"resource_code": "R-001", "agreement_status": "none", "notes": "candidate only"},
+    )
+    assert response.status_code == 200
+    referral = response.json()["referral"]
+    assert referral["resource_code"] == "R-001"
+    assert referral["status"] == "to_verify"
+    assert referral["agreement_status"] == "none"
+
+
+def test_resource_link_requires_agreement_before_referred(client: TestClient) -> None:
+    create_response = client.post(
+        "/api/v1/cases/CASE-0001/referrals",
+        json={"resource_code": "R-003", "agreement_status": "none"},
+    )
+    assert create_response.status_code == 200
+    referral_id = create_response.json()["referral"]["id"]
+
+    blocked_response = client.patch(
+        f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status",
+        json={"status": "referred"},
+    )
+    assert blocked_response.status_code == 409
+
+    allowed_response = client.patch(
+        f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status",
+        json={"status": "referred", "agreement_status": "verbal"},
+    )
+    assert allowed_response.status_code == 200
+    assert allowed_response.json()["referral"]["status"] == "referred"
