@@ -23,11 +23,14 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: 32, fontFamily: "system-ui, sans-serif" }}>
       <section style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 14, color: "#666" }}>CaseBridge v0.1.2-business-skeleton</p>
+        <p style={{ fontSize: 14, color: "#666" }}>CaseBridge v0.1.3-ui-case-loop</p>
         <h1 style={{ fontSize: 40, margin: "8px 0" }}>CaseBridge</h1>
         <p style={{ fontSize: 18, lineHeight: 1.7 }}>
-          Non-AI business skeleton for the C-0001 case loop. The current node focuses on clients, cases, notes, resources, and deterministic resource matching.
+          Persistent manual case-loop UI for C-0001. This node focuses on profile visibility, timeline, note creation, resources, and deterministic matching.
         </p>
+        <a href="/clients/c-0001" style={{ display: "inline-block", marginTop: 12, padding: "10px 14px", borderRadius: 10, background: "#111", color: "#fff", textDecoration: "none" }}>
+          Open C-0001 workspace
+        </a>
       </section>
 
       <section style={{ border: "1px solid #ddd", borderRadius: 16, padding: 24, marginBottom: 24 }}>
