@@ -111,7 +111,7 @@ class AiTask(Base):
     note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
     capability: Mapped[str] = mapped_column(String(80), index=True)
     provider: Mapped[str] = mapped_column(String(80), default="mock")
-    prompt_version: Mapped[str] = mapped_column(String(80), default="intake-v0.1.6")
+    prompt_version: Mapped[str] = mapped_column(String(80), default="intake-v0.1.7")
     status: Mapped[str] = mapped_column(String(50), default="completed", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
@@ -128,6 +128,21 @@ class AiOutput(Base):
     validation_status: Mapped[str] = mapped_column(String(50), default="valid")
     review_status: Mapped[str] = mapped_column(String(50), default="pending", index=True)
     reviewer_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class CaseAssessment(Base):
+    __tablename__ = "case_assessments"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    source_note_id: Mapped[str] = mapped_column(ForeignKey("case_notes.id"), index=True)
+    source_ai_output_id: Mapped[str] = mapped_column(ForeignKey("ai_outputs.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(80))
+    prompt_version: Mapped[str] = mapped_column(String(80))
+    assessment_type: Mapped[str] = mapped_column(String(80), default="intake")
+    assessment_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    reviewer_id: Mapped[str] = mapped_column(String(120), default="demo_social_worker")
+    reviewer_responsibility_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
