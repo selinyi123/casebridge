@@ -83,4 +83,11 @@ def build_evidence_chain(db: Session, case_id: str, organization_id: int = 1) ->
     interventions = list_interventions(db, case_id, organization_id)
     outcomes_stmt = select(ServiceOutcome).where(ServiceOutcome.organization_id == organization_id, ServiceOutcome.case_id == case_id).order_by(ServiceOutcome.created_at)
     outcomes = [model_to_dict(row) for row in db.scalars(outcomes_stmt).all()]
-    return {"case_id": case_id, "plans": plans, "interventions": interventions, "outcomes": outcomes, "manual_only": True}
+    events = []
+    for plan in plans:
+        events.append({"kind": "service_plan", "id": plan["id"], "at": plan["created_at"], "payload": plan})
+    for item in interventions:
+        events.append({"kind": "service_intervention", "id": item["id"], "at": item["created_at"], "payload": item})
+    for outcome in outcomes:
+        events.append({"kind": "outcome", "id": outcome["id"], "at": outcome["created_at"], "payload": outcome})
+    return {"case_id": case_id, "plans": plans, "interventions": interventions, "outcomes": outcomes, "events": sorted(events, key=lambda item: item["at"]), "manual_only": True}
