@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.privacy import redact_text
-from app.db.repository import create_case_note, get_case, list_case_notes, list_cases
+from app.db.persistent_repository import create_case_note, get_case, list_case_notes, list_cases
 from app.db.session import get_db
 from app.schemas import CreateCaseNoteRequest
 
