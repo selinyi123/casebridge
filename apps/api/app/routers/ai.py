@@ -60,14 +60,19 @@ def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session 
 def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, db: Session = Depends(get_db)) -> dict:
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
-    output = review_ai_output(
-        db=db,
-        output_id=output_id,
-        review_status=payload.review_status,
-        reviewer_notes=payload.reviewer_notes,
-        modified_output=payload.modified_output,
-    )
-    if not output or output.get("case_id") != case_id:
+    try:
+        output = review_ai_output(
+            db=db,
+            case_id=case_id,
+            output_id=output_id,
+            review_status=payload.review_status,
+            reviewer_id=payload.reviewer_id,
+            reviewer_notes=payload.reviewer_notes,
+            modified_output=payload.modified_output,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not output:
         raise HTTPException(status_code=404, detail="ai_output_not_found")
     return {"output": output}
 
@@ -77,10 +82,10 @@ def apply_preview(case_id: str, output_id: str, db: Session = Depends(get_db)) -
     if not get_case(db, case_id):
         raise HTTPException(status_code=404, detail="case_not_found")
     try:
-        preview = create_apply_preview(db, output_id)
+        preview = create_apply_preview(db, case_id, output_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if not preview or preview.get("case_id") != case_id:
+    if not preview:
         raise HTTPException(status_code=404, detail="ai_output_not_found")
     return {"preview": preview}
 
@@ -92,12 +97,13 @@ def apply_to_assessment(case_id: str, output_id: str, payload: ApplyAiOutputRequ
     try:
         assessment = apply_ai_output_to_assessment(
             db,
+            case_id=case_id,
             output_id=output_id,
             reviewer_id=payload.reviewer_id,
             responsibility_accepted=payload.reviewer_responsibility_accepted,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if not assessment or assessment.get("case_id") != case_id:
+    if not assessment:
         raise HTTPException(status_code=404, detail="ai_output_not_found")
     return {"assessment": assessment}
