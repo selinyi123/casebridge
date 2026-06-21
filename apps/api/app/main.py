@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.cases import router as cases_router
 from app.routers.clients import router as clients_router
@@ -10,6 +11,14 @@ app = FastAPI(
     title="CaseBridge API",
     description="AI-Native Chinese social-work case-service and resource-collaboration system.",
     version="0.1.2-business-skeleton",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(health_router, prefix="/api/v1")
