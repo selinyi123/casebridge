@@ -16,7 +16,7 @@ from app.routers.timeline import router as timeline_router
 app = FastAPI(
     title="CaseBridge API",
     description="CaseBridge social-work case-service API.",
-    version="0.1.6-ai-intake-gate",
+    version="0.1.7-provider-prompt-gate",
 )
 
 app.add_middleware(
@@ -50,6 +50,6 @@ app.include_router(ai_router, prefix="/api/v1")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.6-ai-intake-gate",
-        "rule": "AI drafts require human review before formal use.",
+        "version": "0.1.7-provider-prompt-gate",
+        "rule": "Provider and prompt registries gate model use.",
     }
