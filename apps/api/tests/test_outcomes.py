@@ -31,3 +31,24 @@ def test_service_outcome_rejects_invalid_gas_score(client: TestClient) -> None:
         json={"gas_score": 3, "narrative": "Invalid score."},
     )
     assert response.status_code == 422
+
+
+def test_outcome_appears_in_timeline(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/cases/CASE-0001/outcomes",
+        json={"gas_score": 0, "narrative": "Timeline outcome check."},
+    )
+    assert response.status_code == 200
+    outcome_id = response.json()["outcome"]["id"]
+
+    timeline = client.get("/api/v1/cases/CASE-0001/timeline").json()["items"]
+    outcome_items = [item for item in timeline if item["kind"] == "outcome"]
+    assert outcome_id in {item["id"] for item in outcome_items}
+
+
+def test_schema_catalog_alias_is_available(client: TestClient) -> None:
+    response = client.get("/api/v1/cases/CASE-0001/outcomes/schema/community-intake-v0.1.10")
+    assert response.status_code == 200
+    schema = response.json()["schema"]
+    assert schema["schema_id"] == "community-intake-v0.1.10"
+    assert "meal_nutrition" in schema["domains"]
