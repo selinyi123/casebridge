@@ -138,3 +138,24 @@ def test_resource_link_requires_agreement_before_referred(client: TestClient) ->
     )
     assert allowed_response.status_code == 200
     assert allowed_response.json()["referral"]["status"] == "referred"
+
+
+def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
+    goal_response = client.post(
+        "/api/v1/cases/CASE-0001/goals",
+        json={"title": "timeline goal", "target_state": "visible in unified timeline"},
+    )
+    assert goal_response.status_code == 200
+    link_response = client.post(
+        "/api/v1/cases/CASE-0001/referrals",
+        json={"resource_code": "R-005", "agreement_status": "none"},
+    )
+    assert link_response.status_code == 200
+
+    timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
+    assert timeline_response.status_code == 200
+    kinds = {item["kind"] for item in timeline_response.json()["items"]}
+    assert "note" in kinds
+    assert "goal" in kinds
+    assert "resource_link" in kinds
+    assert "audit" in kinds
