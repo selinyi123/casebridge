@@ -38,6 +38,11 @@ class ReviewAiOutputRequest(BaseModel):
     modified_output: dict | None = None
 
 
+class ApplyAiOutputRequest(BaseModel):
+    reviewer_responsibility_accepted: bool
+    reviewer_id: str = Field(default="demo_social_worker", min_length=1, max_length=120)
+
+
 class IntakeDraftOutput(BaseModel):
     needs: list[str] = Field(default_factory=list)
     risk_clues: list[str] = Field(default_factory=list)
