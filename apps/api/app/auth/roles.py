@@ -1,6 +1,6 @@
-ALLOWED_REVIEWER_ROLES = {"worker", "supervisor", "admin"}
+ALLOWED_REVIEWER_ROLES = {"social_worker", "supervisor", "admin"}
 CORRECTION_ROLES = {"supervisor", "admin"}
-OUTCOME_REPORT_ROLES = {"worker", "supervisor", "admin"}
+OUTCOME_REPORT_ROLES = {"social_worker", "supervisor", "admin"}
 
 
 def require_role(role: str, allowed: set[str]) -> None:
