@@ -146,6 +146,20 @@ class CaseAssessment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class ServiceOutcome(Base):
+    __tablename__ = "service_outcomes"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    goal_id: Mapped[str | None] = mapped_column(ForeignKey("service_goals.id"), nullable=True, index=True)
+    assessment_id: Mapped[str | None] = mapped_column(ForeignKey("case_assessments.id"), nullable=True, index=True)
+    outcome_type: Mapped[str] = mapped_column(String(80), default="goal_attainment")
+    gas_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    narrative: Mapped[str] = mapped_column(Text)
+    evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recorded_by: Mapped[str] = mapped_column(String(120), default="demo_social_worker")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 def model_to_dict(row: Any) -> dict[str, Any]:
     data: dict[str, Any] = {}
     for column in row.__table__.columns:
