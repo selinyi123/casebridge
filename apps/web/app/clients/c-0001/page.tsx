@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ClientProfile = { code: string; display_name: string; age: number; community: string; client_type: string; primary_concern: string; existing_support?: string; consent_status?: string; tags: string[] };
 type CaseRecord = { id: string; title: string; stage: string; status: string; primary_worker: string };
-type CaseNote = { id: string; note_type: string; content_raw: string; content_clean: string; occurred_at: string; pii_detected: boolean; source: string };
+type CaseNote = { id: string; note_type: string; content_raw: string; content_clean: string; content_display?: string; occurred_at: string; pii_detected: boolean; source: string };
 type Resource = { code: string; name: string; category: string; match_codes: string[]; status: string; region?: string };
 type MatchCandidate = { resource_code: string; resource_name: string; category: string; matched_codes: string[]; requires_human_verification: boolean };
 type ServiceGoal = { id: string; title: string; target_state: string; status: string; created_at: string };
@@ -13,6 +13,14 @@ type ResourceLink = { id: string; resource_code: string; status: string; agreeme
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const box: React.CSSProperties = { border: "1px solid #ddd", borderRadius: 16, padding: 20, background: "#fff" };
 const muted: React.CSSProperties = { color: "#666", fontSize: 14 };
+
+function nextReferralStep(link: ResourceLink): { status: string; agreement_status?: string; label: string } | null {
+  if (link.status === "to_verify") return { status: "contacted", label: "Mark contacted" };
+  if (link.status === "contacted") return { status: "referred", agreement_status: "verbal", label: "Refer with verbal agreement" };
+  if (link.status === "referred") return { status: "success", agreement_status: "verbal", label: "Mark success" };
+  if (link.status === "success" || link.status === "failed") return { status: "completed", agreement_status: link.agreement_status, label: "Complete follow-up" };
+  return null;
+}
 
 export default function ClientWorkspacePage() {
   const [client, setClient] = useState<ClientProfile | null>(null);
@@ -49,7 +57,7 @@ export default function ClientWorkspacePage() {
 
     const linksRes = await fetch(`${API_BASE}/api/v1/cases/${selectedCase.id}/referrals`);
     setLinks((await linksRes.json()).items || []);
-    setStatus("Workspace loaded. AI is not used in this version.");
+    setStatus("Workspace loaded. Raw visit notes are hidden by default.");
   }
 
   async function submitNote(event: FormEvent<HTMLFormElement>) {
@@ -60,7 +68,7 @@ export default function ClientWorkspacePage() {
     if (!response.ok) { setStatus("Failed to save note. Check API logs."); return; }
     setNewNote("");
     await loadWorkspace();
-    setStatus("Note saved and visible in timeline.");
+    setStatus("Note saved. Display uses redacted/clean text by default.");
   }
 
   async function submitGoal(event: FormEvent<HTMLFormElement>) {
@@ -91,12 +99,21 @@ export default function ClientWorkspacePage() {
     setStatus("Resource candidate saved as manual link with agreement_status=none.");
   }
 
-  async function advanceLink(linkId: string) {
+  async function advanceLink(link: ResourceLink) {
     if (!caseRecord) return;
-    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/referrals/${linkId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "referred", agreement_status: "verbal" }) });
-    if (!response.ok) { setStatus("Link status blocked. Agreement state is required."); return; }
+    const next = nextReferralStep(link);
+    if (!next) {
+      setStatus("This resource link has no further allowed transition.");
+      return;
+    }
+    const response = await fetch(`${API_BASE}/api/v1/cases/${caseRecord.id}/referrals/${link.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next.status, agreement_status: next.agreement_status }),
+    });
+    if (!response.ok) { setStatus("Link status blocked by consent or transition guard."); return; }
     await loadWorkspace();
-    setStatus("Resource link advanced after explicit agreement state.");
+    setStatus(`Resource link advanced to ${next.status}.`);
   }
 
   useEffect(() => { loadWorkspace().catch(() => setStatus("Failed to load workspace. Start the API on port 8000.")); }, []);
@@ -104,7 +121,7 @@ export default function ClientWorkspacePage() {
   return (
     <main style={{ maxWidth: 1180, margin: "0 auto", padding: 32, fontFamily: "system-ui, sans-serif", background: "#fafafa" }}>
       <header style={{ marginBottom: 24 }}>
-        <p style={muted}>CaseBridge v0.1.4-manual-goal-link-gate</p>
+        <p style={muted}>CaseBridge v0.1.10.3-security-stabilization</p>
         <h1 style={{ fontSize: 34, margin: "4px 0" }}>C-0001 Case Workspace</h1>
         <p style={muted}>{status}</p>
       </header>
@@ -116,7 +133,7 @@ export default function ClientWorkspacePage() {
         </div>
         <div style={box}>
           <h2>Case summary</h2>
-          {caseRecord ? <div style={{ lineHeight: 1.8 }}><div><strong>{caseRecord.title}</strong></div><div>Stage: <code>{caseRecord.stage}</code></div><div>Status: <code>{caseRecord.status}</code></div><div>Worker: {caseRecord.primary_worker}</div><p style={muted}>Manual-only. AI output is not written to records.</p></div> : <p>Loading...</p>}
+          {caseRecord ? <div style={{ lineHeight: 1.8 }}><div><strong>{caseRecord.title}</strong></div><div>Stage: <code>{caseRecord.stage}</code></div><div>Status: <code>{caseRecord.status}</code></div><div>Worker: {caseRecord.primary_worker}</div><p style={muted}>Manual flow remains available when AI is unavailable.</p></div> : <p>Loading...</p>}
         </div>
       </section>
 
@@ -125,7 +142,7 @@ export default function ClientWorkspacePage() {
           <div style={box}>
             <h2>Timeline</h2>
             <form onSubmit={submitNote} style={{ marginBottom: 20 }}><textarea value={newNote} onChange={(event) => setNewNote(event.target.value)} placeholder="Add a human visit note." style={{ width: "100%", minHeight: 100, borderRadius: 12, border: "1px solid #ccc", padding: 12 }} /><button type="submit" style={{ marginTop: 8, padding: "10px 14px", borderRadius: 10, border: "1px solid #222", background: "#111", color: "#fff" }}>Save human note</button></form>
-            <div style={{ display: "grid", gap: 12 }}>{notes.map((note) => <article key={note.id} style={{ borderLeft: "4px solid #111", paddingLeft: 14 }}><div style={muted}>{note.occurred_at} · {note.note_type} · {note.source}</div><p>{note.content_raw}</p>{note.pii_detected ? <p style={{ color: "#a33" }}>PII detected; clean text stored separately.</p> : <p style={muted}>No PII detected by MVP redactor.</p>}</article>)}</div>
+            <div style={{ display: "grid", gap: 12 }}>{notes.map((note) => <article key={note.id} style={{ borderLeft: "4px solid #111", paddingLeft: 14 }}><div style={muted}>{note.occurred_at} · {note.note_type} · {note.source}</div><p>{note.content_display || note.content_clean}</p>{note.pii_detected ? <p style={{ color: "#a33" }}>PII detected; raw text is not displayed in the workspace.</p> : <p style={muted}>No PII detected by MVP redactor.</p>}</article>)}</div>
           </div>
 
           <div style={box}>
@@ -143,7 +160,10 @@ export default function ClientWorkspacePage() {
 
           <div style={box}>
             <h2>Manual resource links</h2>
-            <div style={{ display: "grid", gap: 10 }}>{links.map((link) => <div key={link.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}><strong>{link.resource_code}</strong><div>Status: <code>{link.status}</code></div><div>Agreement: <code>{link.agreement_status}</code></div><button onClick={() => advanceLink(link.id)} style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>Advance with verbal agreement</button></div>)}</div>
+            <div style={{ display: "grid", gap: 10 }}>{links.map((link) => {
+              const next = nextReferralStep(link);
+              return <div key={link.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}><strong>{link.resource_code}</strong><div>Status: <code>{link.status}</code></div><div>Agreement: <code>{link.agreement_status}</code></div>{next ? <button onClick={() => advanceLink(link)} style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #222" }}>{next.label}</button> : <p style={muted}>No further transition.</p>}</div>;
+            })}</div>
           </div>
 
           <div style={box}>
