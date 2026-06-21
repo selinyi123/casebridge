@@ -79,6 +79,24 @@ def _validate_intake_payload(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("invalid_modified_ai_output_schema") from exc
 
 
+def _ensure_case_exists(db: Session, case_id: str, organization_id: int) -> None:
+    exists = db.scalar(select(CaseRecord.id).where(CaseRecord.id == case_id, CaseRecord.organization_id == organization_id))
+    if not exists:
+        raise ValueError("case_not_found")
+
+
+def _ensure_resource_exists(db: Session, resource_code: str, organization_id: int) -> None:
+    exists = db.scalar(select(Resource.code).where(Resource.code == resource_code, Resource.organization_id == organization_id))
+    if not exists:
+        raise ValueError("resource_not_found")
+
+
+def _ensure_note_belongs_to_case(db: Session, note_id: str, case_id: str, organization_id: int) -> None:
+    exists = db.scalar(select(CaseNote.id).where(CaseNote.id == note_id, CaseNote.case_id == case_id, CaseNote.organization_id == organization_id))
+    if not exists:
+        raise ValueError("note_not_found")
+
+
 def assert_referral_transition_allowed(current_status: str, next_status: str, agreement_status: str) -> None:
     if current_status == next_status:
         return
@@ -155,6 +173,7 @@ def create_case_note(
     actor: str = "demo_social_worker",
     organization_id: int = DEFAULT_ORGANIZATION_ID,
 ) -> dict[str, Any]:
+    _ensure_case_exists(db, case_id, organization_id)
     note_id = _next_id("NOTE", _note_counter, CaseNote, db)
     note = CaseNote(
         id=note_id,
@@ -199,6 +218,7 @@ def list_service_goals(db: Session, case_id: str, organization_id: int = DEFAULT
 
 
 def create_service_goal(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any]:
+    _ensure_case_exists(db, case_id, organization_id)
     goal = ServiceGoal(
         id=_next_id("GOAL", _goal_counter, ServiceGoal, db),
         organization_id=organization_id,
@@ -220,6 +240,8 @@ def list_referrals(db: Session, case_id: str, organization_id: int = DEFAULT_ORG
 
 
 def create_referral(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any]:
+    _ensure_case_exists(db, case_id, organization_id)
+    _ensure_resource_exists(db, payload.get("resource_code", ""), organization_id)
     referral = Referral(
         id=_next_id("REF", _referral_counter, Referral, db),
         organization_id=organization_id,
@@ -290,6 +312,8 @@ def create_ai_intake_output(
     actor: str = "demo_social_worker",
     organization_id: int = DEFAULT_ORGANIZATION_ID,
 ) -> dict[str, Any]:
+    _ensure_case_exists(db, case_id, organization_id)
+    _ensure_note_belongs_to_case(db, note_id, case_id, organization_id)
     parsed_output = _validate_intake_payload(parsed_output)
     task = AiTask(
         id=_next_id("AITASK", _ai_task_counter, AiTask, db),
