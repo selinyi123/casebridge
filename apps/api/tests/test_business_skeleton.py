@@ -55,6 +55,21 @@ def test_create_case_note_preserves_raw_content(client: TestClient) -> None:
     assert payload["note"]["source"] == "human"
 
 
+def test_created_note_is_visible_in_case_timeline(client: TestClient) -> None:
+    raw = "Timeline visibility note for C-0001."
+    create_response = client.post(
+        "/api/v1/cases/CASE-0001/notes",
+        json={"note_type": "visit", "content_raw": raw},
+    )
+    assert create_response.status_code == 200
+    note_id = create_response.json()["note"]["id"]
+
+    timeline_response = client.get("/api/v1/cases/CASE-0001/notes")
+    assert timeline_response.status_code == 200
+    note_ids = {item["id"] for item in timeline_response.json()["items"]}
+    assert note_id in note_ids
+
+
 def test_create_case_note_rejects_blank_content(client: TestClient) -> None:
     response = client.post(
         "/api/v1/cases/CASE-0001/notes",
