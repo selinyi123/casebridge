@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.db.assessment_version_repository import list_versions
 from app.db.outcome_repository import list_service_outcomes
-from app.db.persistent_repository import get_case, list_case_timeline
+from app.db.persistent_repository import get_case, list_case_assessments, list_case_timeline
 from app.db.session import get_db
 
 router = APIRouter(prefix="/cases/{case_id}/timeline", tags=["timeline"])
@@ -21,4 +22,13 @@ def index(case_id: str, db: Session = Depends(get_db)) -> dict:
             "title": outcome["outcome_type"],
             "payload": outcome,
         })
+    for assessment in list_case_assessments(db, case_id):
+        for version in list_versions(db, case_id, assessment["id"], assessment.get("organization_id", 1)):
+            items.append({
+                "kind": "assessment_version",
+                "id": version["id"],
+                "at": version["created_at"],
+                "title": f"version {version['version_number']}",
+                "payload": version,
+            })
     return {"items": sorted(items, key=lambda item: item["at"])}
