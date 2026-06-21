@@ -105,4 +105,5 @@ def require_roles(*roles: str):
 
 
 RequireCaseWriter = Annotated[User, Depends(require_roles("social_worker", "admin"))]
+RequireSupervisorReviewer = Annotated[User, Depends(require_roles("supervisor", "admin"))]
 RequireAdmin = Annotated[User, Depends(require_roles("admin"))]
