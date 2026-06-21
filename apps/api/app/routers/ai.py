@@ -3,8 +3,15 @@ from sqlalchemy.orm import Session
 
 from app.ai.prompt_registry import get_prompt_spec
 from app.ai.provider_registry import generate_with_provider
-from app.core.privacy import redact_text
-from app.db.persistent_repository import create_ai_intake_output, get_case, get_note, list_ai_outputs, review_ai_output
+from app.ai.redaction_gateway import run_redaction_gate
+from app.db.persistent_repository import (
+    create_ai_intake_output,
+    create_apply_preview,
+    get_case,
+    get_note,
+    list_ai_outputs,
+    review_ai_output,
+)
 from app.db.session import get_db
 from app.schemas import GenerateAiIntakeRequest, ReviewAiOutputRequest
 
@@ -27,9 +34,11 @@ def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session 
     note = get_note(db, payload.note_id)
     if not note or note.get("case_id") != case_id:
         raise HTTPException(status_code=404, detail="note_not_found")
-    redacted = redact_text(note.get("content_raw", ""))
+    redaction = run_redaction_gate(note.get("content_raw", ""))
+    if redaction.report.blocked:
+        raise HTTPException(status_code=409, detail={"error": "redaction_gate_blocked", "report": redaction.report.__dict__})
     prompt = get_prompt_spec(DEFAULT_PROMPT_VERSION)
-    provider_result = generate_with_provider(DEFAULT_PROVIDER, prompt, redacted.clean_text)
+    provider_result = generate_with_provider(DEFAULT_PROVIDER, prompt, redaction.clean_text)
     output = create_ai_intake_output(
         db,
         case_id=case_id,
@@ -40,7 +49,7 @@ def generate_intake(case_id: str, payload: GenerateAiIntakeRequest, db: Session 
     )
     return {
         "output": output,
-        "redaction": {"pii_hits": redacted.pii_hits, "is_safe_for_model": redacted.is_safe_for_model},
+        "redaction": redaction.report.__dict__,
         "provider": provider_result.provider,
         "prompt_version": provider_result.prompt_version,
     }
@@ -60,3 +69,16 @@ def review(case_id: str, output_id: str, payload: ReviewAiOutputRequest, db: Ses
     if not output or output.get("case_id") != case_id:
         raise HTTPException(status_code=404, detail="ai_output_not_found")
     return {"output": output}
+
+
+@router.post("/outputs/{output_id}/apply-preview")
+def apply_preview(case_id: str, output_id: str, db: Session = Depends(get_db)) -> dict:
+    if not get_case(db, case_id):
+        raise HTTPException(status_code=404, detail="case_not_found")
+    try:
+        preview = create_apply_preview(db, output_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not preview or preview.get("case_id") != case_id:
+        raise HTTPException(status_code=404, detail="ai_output_not_found")
+    return {"preview": preview}
