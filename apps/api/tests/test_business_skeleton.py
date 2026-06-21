@@ -17,6 +17,16 @@ def client() -> TestClient:
         yield test_client
 
 
+def auth_headers(client: TestClient) -> dict[str, str]:
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "demo_social_worker", "password": "casebridge_demo_password"},
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_health_check(client: TestClient) -> None:
     response = client.get("/api/v1/health")
     assert response.status_code == 200
@@ -45,19 +55,20 @@ def test_resource_match_rejects_invalid_body_type(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_create_case_note_preserves_raw_content(client: TestClient) -> None:
+def test_create_case_note_hides_raw_content_by_default(client: TestClient) -> None:
     raw = "Synthetic visit note for C-0001."
-    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw}, headers=auth_headers(client))
     assert response.status_code == 200
     payload = response.json()
-    assert payload["note"]["content_raw"] == raw
+    assert payload["note"]["content_raw"] == "[REDACTED_RAW_CONTENT]"
+    assert payload["note"]["content_display"] == raw
     assert payload["note"]["content_clean"] == raw
     assert payload["note"]["source"] == "human"
 
 
 def test_created_note_is_visible_in_case_timeline(client: TestClient) -> None:
     raw = "Timeline visibility note for C-0001."
-    create_response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
+    create_response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw}, headers=auth_headers(client))
     assert create_response.status_code == 200
     note_id = create_response.json()["note"]["id"]
     timeline_response = client.get("/api/v1/cases/CASE-0001/notes")
@@ -66,13 +77,13 @@ def test_created_note_is_visible_in_case_timeline(client: TestClient) -> None:
 
 
 def test_create_case_note_rejects_blank_content(client: TestClient) -> None:
-    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": ""})
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": ""}, headers=auth_headers(client))
     assert response.status_code == 422
 
 
 def test_redactor_masks_long_digit_run(client: TestClient) -> None:
     raw = "demo 13800000000"
-    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw})
+    response = client.post("/api/v1/cases/CASE-0001/notes", json={"note_type": "visit", "content_raw": raw}, headers=auth_headers(client))
     assert response.status_code == 200
     payload = response.json()
     assert "[REDACTED_PHONE]" in payload["note"]["content_clean"]
@@ -80,7 +91,11 @@ def test_redactor_masks_long_digit_run(client: TestClient) -> None:
 
 
 def test_create_service_goal(client: TestClient) -> None:
-    response = client.post("/api/v1/cases/CASE-0001/goals", json={"title": "建立稳定餐食支持", "target_state": "完成助餐资源核实并形成跟进安排"})
+    response = client.post(
+        "/api/v1/cases/CASE-0001/goals",
+        json={"title": "建立稳定餐食支持", "target_state": "完成助餐资源核实并形成跟进安排"},
+        headers=auth_headers(client),
+    )
     assert response.status_code == 200
     goal = response.json()["goal"]
     assert goal["case_id"] == "CASE-0001"
@@ -91,7 +106,11 @@ def test_create_service_goal(client: TestClient) -> None:
 
 
 def test_create_resource_link_candidate(client: TestClient) -> None:
-    response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-001", "agreement_status": "none", "notes": "candidate only"})
+    response = client.post(
+        "/api/v1/cases/CASE-0001/referrals",
+        json={"resource_code": "R-001", "agreement_status": "none", "notes": "candidate only"},
+        headers=auth_headers(client),
+    )
     assert response.status_code == 200
     referral = response.json()["referral"]
     assert referral["resource_code"] == "R-001"
@@ -100,19 +119,30 @@ def test_create_resource_link_candidate(client: TestClient) -> None:
 
 
 def test_resource_link_requires_agreement_before_referred(client: TestClient) -> None:
-    create_response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-003", "agreement_status": "none"})
+    headers = auth_headers(client)
+    create_response = client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-003", "agreement_status": "none"}, headers=headers)
     assert create_response.status_code == 200
     referral_id = create_response.json()["referral"]["id"]
-    blocked_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "referred"})
+
+    blocked_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "referred"}, headers=headers)
     assert blocked_response.status_code == 409
-    allowed_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "referred", "agreement_status": "verbal"})
+
+    contacted_response = client.patch(f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status", json={"status": "contacted"}, headers=headers)
+    assert contacted_response.status_code == 200
+
+    allowed_response = client.patch(
+        f"/api/v1/cases/CASE-0001/referrals/{referral_id}/status",
+        json={"status": "referred", "agreement_status": "verbal"},
+        headers=headers,
+    )
     assert allowed_response.status_code == 200
     assert allowed_response.json()["referral"]["status"] == "referred"
 
 
 def test_unified_timeline_contains_manual_events(client: TestClient) -> None:
-    client.post("/api/v1/cases/CASE-0001/goals", json={"title": "timeline goal", "target_state": "visible in unified timeline"})
-    client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-005", "agreement_status": "none"})
+    headers = auth_headers(client)
+    client.post("/api/v1/cases/CASE-0001/goals", json={"title": "timeline goal", "target_state": "visible in unified timeline"}, headers=headers)
+    client.post("/api/v1/cases/CASE-0001/referrals", json={"resource_code": "R-005", "agreement_status": "none"}, headers=headers)
     timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
     assert timeline_response.status_code == 200
     kinds = {item["kind"] for item in timeline_response.json()["items"]}
@@ -146,7 +176,7 @@ def test_golden_fixture_for_mock_intake_provider() -> None:
 
 def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
-    response = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id})
+    response = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}, headers=auth_headers(client))
     assert response.status_code == 200
     payload = response.json()
     output = payload["output"]
@@ -159,21 +189,29 @@ def test_ai_intake_output_is_draft_only(client: TestClient) -> None:
 
 
 def test_ai_output_review_updates_review_status_only(client: TestClient) -> None:
+    headers = auth_headers(client)
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
-    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    review_response = client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted", "reviewer_notes": "manual review completed"})
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}, headers=headers).json()["output"]
+    review_response = client.patch(
+        f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review",
+        json={"review_status": "accepted", "reviewer_notes": "manual review completed"},
+        headers=headers,
+    )
     assert review_response.status_code == 200
-    assert review_response.json()["output"]["review_status"] == "accepted"
+    reviewed_output = review_response.json()["output"]
+    assert reviewed_output["review_status"] == "accepted"
+    assert reviewed_output["reviewed_by"] == "demo_social_worker"
     assert "ai_outputs" not in client.get("/api/v1/cases/CASE-0001").json()["case"]
 
 
 def test_apply_preview_requires_reviewed_ai_output(client: TestClient) -> None:
+    headers = auth_headers(client)
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
-    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    blocked = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview")
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}, headers=headers).json()["output"]
+    blocked = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview", headers=headers)
     assert blocked.status_code == 409
-    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
-    allowed = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview")
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"}, headers=headers)
+    allowed = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-preview", headers=headers)
     assert allowed.status_code == 200
     preview = allowed.json()["preview"]
     assert preview["will_write_formal_fields"] is False
@@ -181,17 +219,19 @@ def test_apply_preview_requires_reviewed_ai_output(client: TestClient) -> None:
 
 
 def test_explicit_apply_to_assessment_requires_review_and_responsibility(client: TestClient) -> None:
+    headers = auth_headers(client)
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
-    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    blocked_pending = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True})
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}, headers=headers).json()["output"]
+    blocked_pending = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True}, headers=headers)
     assert blocked_pending.status_code == 409
-    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
-    blocked_responsibility = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": False})
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"}, headers=headers)
+    blocked_responsibility = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": False}, headers=headers)
     assert blocked_responsibility.status_code == 409
-    applied = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True, "reviewer_id": "demo_social_worker"})
+    applied = client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True, "reviewer_id": "ignored_client_value"}, headers=headers)
     assert applied.status_code == 200
     assessment = applied.json()["assessment"]
     assert assessment["source_ai_output_id"] == output["id"]
+    assert assessment["reviewer_id"] == "demo_social_worker"
     assert assessment["reviewer_responsibility_accepted"] is True
     assert assessment["provider"] == "mock"
     assert assessment["prompt_version"] == "intake-v0.1.7"
@@ -200,10 +240,11 @@ def test_explicit_apply_to_assessment_requires_review_and_responsibility(client:
 
 
 def test_timeline_contains_assessment_and_apply_audit(client: TestClient) -> None:
+    headers = auth_headers(client)
     note_id = client.get("/api/v1/cases/CASE-0001/notes").json()["items"][0]["id"]
-    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}).json()["output"]
-    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"})
-    client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True})
+    output = client.post("/api/v1/cases/CASE-0001/ai/intake", json={"note_id": note_id}, headers=headers).json()["output"]
+    client.patch(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/review", json={"review_status": "accepted"}, headers=headers)
+    client.post(f"/api/v1/cases/CASE-0001/ai/outputs/{output['id']}/apply-to-assessment", json={"reviewer_responsibility_accepted": True}, headers=headers)
     timeline_response = client.get("/api/v1/cases/CASE-0001/timeline")
     assert timeline_response.status_code == 200
     items = timeline_response.json()["items"]
