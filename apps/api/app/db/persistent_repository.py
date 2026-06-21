@@ -29,6 +29,7 @@ _ai_task_counter = count(1)
 _ai_output_counter = count(1)
 _assessment_counter = count(1)
 
+DEFAULT_ORGANIZATION_ID = 1
 RAW_CONTENT_PLACEHOLDER = "[REDACTED_RAW_CONTENT]"
 REVIEW_STATUSES = {"accepted", "modified", "rejected"}
 APPLYABLE_REVIEW_STATUSES = {"accepted", "modified"}
@@ -98,45 +99,66 @@ def record_audit_event(
     entity_id: str,
     payload: dict[str, Any] | None = None,
     actor: str = "demo_social_worker",
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
 ) -> None:
-    db.add(AuditEvent(case_id=case_id, event_type=event_type, entity_type=entity_type, entity_id=entity_id, payload=payload or {}, actor=actor))
+    db.add(
+        AuditEvent(
+            organization_id=organization_id,
+            case_id=case_id,
+            event_type=event_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            payload=payload or {},
+            actor=actor,
+        )
+    )
 
 
-def list_clients(db: Session) -> list[dict[str, Any]]:
-    return [model_to_dict(row) for row in db.scalars(select(Client).order_by(Client.code)).all()]
+def list_clients(db: Session, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(Client).where(Client.organization_id == organization_id).order_by(Client.code)
+    return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def get_client(db: Session, code: str) -> dict[str, Any] | None:
-    row = db.scalar(select(Client).where(Client.code == code))
+def get_client(db: Session, code: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    row = db.scalar(select(Client).where(Client.code == code, Client.organization_id == organization_id))
     return model_to_dict(row) if row else None
 
 
-def list_cases(db: Session, client_code: str | None = None) -> list[dict[str, Any]]:
-    stmt = select(CaseRecord).order_by(CaseRecord.opened_at)
+def list_cases(db: Session, client_code: str | None = None, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(CaseRecord).where(CaseRecord.organization_id == organization_id).order_by(CaseRecord.opened_at)
     if client_code:
         stmt = stmt.where(CaseRecord.client_code == client_code)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def get_case(db: Session, case_id: str) -> dict[str, Any] | None:
-    row = db.get(CaseRecord, case_id)
+def get_case(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    row = db.scalar(select(CaseRecord).where(CaseRecord.id == case_id, CaseRecord.organization_id == organization_id))
     return model_to_dict(row) if row else None
 
 
-def get_note(db: Session, note_id: str) -> dict[str, Any] | None:
-    row = db.get(CaseNote, note_id)
+def get_note(db: Session, note_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    row = db.scalar(select(CaseNote).where(CaseNote.id == note_id, CaseNote.organization_id == organization_id))
     return _serialize_note(row, include_raw=True) if row else None
 
 
-def list_case_notes(db: Session, case_id: str, include_raw: bool = False) -> list[dict[str, Any]]:
-    stmt = select(CaseNote).where(CaseNote.case_id == case_id).order_by(CaseNote.occurred_at)
+def list_case_notes(db: Session, case_id: str, include_raw: bool = False, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(CaseNote).where(CaseNote.case_id == case_id, CaseNote.organization_id == organization_id).order_by(CaseNote.occurred_at)
     return [_serialize_note(row, include_raw=include_raw) for row in db.scalars(stmt).all()]
 
 
-def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content_clean: str, pii_detected: bool, actor: str = "demo_social_worker") -> dict[str, Any]:
+def create_case_note(
+    db: Session,
+    case_id: str,
+    payload: dict[str, Any],
+    content_clean: str,
+    pii_detected: bool,
+    actor: str = "demo_social_worker",
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
+) -> dict[str, Any]:
     note_id = _next_id("NOTE", _note_counter, CaseNote, db)
     note = CaseNote(
         id=note_id,
+        organization_id=organization_id,
         case_id=case_id,
         note_type=payload.get("note_type", "visit"),
         content_raw=payload.get("content_raw", ""),
@@ -146,49 +168,61 @@ def create_case_note(db: Session, case_id: str, payload: dict[str, Any], content
         source="human",
     )
     db.add(note)
-    record_audit_event(db, case_id, "note.created", "case_note", note_id, {"note_type": note.note_type, "pii_detected": pii_detected}, actor=actor)
+    record_audit_event(
+        db,
+        case_id,
+        "note.created",
+        "case_note",
+        note_id,
+        {"note_type": note.note_type, "pii_detected": pii_detected},
+        actor=actor,
+        organization_id=organization_id,
+    )
     db.commit()
     db.refresh(note)
     return _serialize_note(note, include_raw=False)
 
 
-def list_resources(db: Session) -> list[dict[str, Any]]:
-    return [model_to_dict(row) for row in db.scalars(select(Resource).order_by(Resource.code)).all()]
-
-
-def get_resource(db: Session, resource_code: str) -> dict[str, Any] | None:
-    row = db.get(Resource, resource_code)
-    return model_to_dict(row) if row else None
-
-
-def list_service_goals(db: Session, case_id: str) -> list[dict[str, Any]]:
-    stmt = select(ServiceGoal).where(ServiceGoal.case_id == case_id).order_by(ServiceGoal.created_at)
+def list_resources(db: Session, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(Resource).where(Resource.organization_id == organization_id).order_by(Resource.code)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def create_service_goal(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker") -> dict[str, Any]:
+def get_resource(db: Session, resource_code: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    row = db.scalar(select(Resource).where(Resource.code == resource_code, Resource.organization_id == organization_id))
+    return model_to_dict(row) if row else None
+
+
+def list_service_goals(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(ServiceGoal).where(ServiceGoal.case_id == case_id, ServiceGoal.organization_id == organization_id).order_by(ServiceGoal.created_at)
+    return [model_to_dict(row) for row in db.scalars(stmt).all()]
+
+
+def create_service_goal(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any]:
     goal = ServiceGoal(
         id=_next_id("GOAL", _goal_counter, ServiceGoal, db),
+        organization_id=organization_id,
         case_id=case_id,
         title=payload.get("title", ""),
         target_state=payload.get("target_state", ""),
         status=payload.get("status", "not_started"),
     )
     db.add(goal)
-    record_audit_event(db, case_id, "goal.created", "service_goal", goal.id, {"status": goal.status}, actor=actor)
+    record_audit_event(db, case_id, "goal.created", "service_goal", goal.id, {"status": goal.status}, actor=actor, organization_id=organization_id)
     db.commit()
     db.refresh(goal)
     return model_to_dict(goal)
 
 
-def list_referrals(db: Session, case_id: str) -> list[dict[str, Any]]:
-    stmt = select(Referral).where(Referral.case_id == case_id).order_by(Referral.created_at)
+def list_referrals(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(Referral).where(Referral.case_id == case_id, Referral.organization_id == organization_id).order_by(Referral.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def create_referral(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker") -> dict[str, Any]:
+def create_referral(db: Session, case_id: str, payload: dict[str, Any], actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any]:
     referral = Referral(
         id=_next_id("REF", _referral_counter, Referral, db),
+        organization_id=organization_id,
         case_id=case_id,
         resource_code=payload.get("resource_code", ""),
         status="to_verify",
@@ -204,14 +238,23 @@ def create_referral(db: Session, case_id: str, payload: dict[str, Any], actor: s
         referral.id,
         {"resource_code": referral.resource_code, "agreement_status": referral.agreement_status},
         actor=actor,
+        organization_id=organization_id,
     )
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
 
 
-def update_referral_status(db: Session, case_id: str, referral_id: str, status: str, agreement_status: str | None = None, actor: str = "demo_social_worker") -> dict[str, Any] | None:
-    referral = db.scalar(select(Referral).where(Referral.id == referral_id, Referral.case_id == case_id))
+def update_referral_status(
+    db: Session,
+    case_id: str,
+    referral_id: str,
+    status: str,
+    agreement_status: str | None = None,
+    actor: str = "demo_social_worker",
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
+) -> dict[str, Any] | None:
+    referral = db.scalar(select(Referral).where(Referral.id == referral_id, Referral.case_id == case_id, Referral.organization_id == organization_id))
     if not referral:
         return None
 
@@ -230,16 +273,27 @@ def update_referral_status(db: Session, case_id: str, referral_id: str, status: 
         referral.id,
         {"from": previous_status, "to": status, "agreement_status": next_agreement},
         actor=actor,
+        organization_id=organization_id,
     )
     db.commit()
     db.refresh(referral)
     return model_to_dict(referral)
 
 
-def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_output: dict[str, Any], provider: str, prompt_version: str, actor: str = "demo_social_worker") -> dict[str, Any]:
+def create_ai_intake_output(
+    db: Session,
+    case_id: str,
+    note_id: str,
+    parsed_output: dict[str, Any],
+    provider: str,
+    prompt_version: str,
+    actor: str = "demo_social_worker",
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
+) -> dict[str, Any]:
     parsed_output = _validate_intake_payload(parsed_output)
     task = AiTask(
         id=_next_id("AITASK", _ai_task_counter, AiTask, db),
+        organization_id=organization_id,
         case_id=case_id,
         note_id=note_id,
         capability="intake",
@@ -249,6 +303,7 @@ def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_outp
     )
     output = AiOutput(
         id=_next_id("AIOUT", _ai_output_counter, AiOutput, db),
+        organization_id=organization_id,
         task_id=task.id,
         case_id=case_id,
         note_id=note_id,
@@ -268,19 +323,20 @@ def create_ai_intake_output(db: Session, case_id: str, note_id: str, parsed_outp
         output.id,
         {"task_id": task.id, "provider": task.provider, "prompt_version": task.prompt_version, "review_status": output.review_status},
         actor=actor,
+        organization_id=organization_id,
     )
     db.commit()
     db.refresh(output)
     return model_to_dict(output)
 
 
-def list_ai_outputs(db: Session, case_id: str) -> list[dict[str, Any]]:
-    stmt = select(AiOutput).where(AiOutput.case_id == case_id).order_by(AiOutput.created_at)
+def list_ai_outputs(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(AiOutput).where(AiOutput.case_id == case_id, AiOutput.organization_id == organization_id).order_by(AiOutput.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def get_ai_output(db: Session, output_id: str) -> dict[str, Any] | None:
-    row = db.get(AiOutput, output_id)
+def get_ai_output(db: Session, output_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    row = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.organization_id == organization_id))
     return model_to_dict(row) if row else None
 
 
@@ -292,8 +348,9 @@ def review_ai_output(
     reviewer_id: str,
     reviewer_notes: str | None = None,
     modified_output: dict[str, Any] | None = None,
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
 ) -> dict[str, Any] | None:
-    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id))
+    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id, AiOutput.organization_id == organization_id))
     if not output:
         return None
     if output.applied_to:
@@ -312,14 +369,14 @@ def review_ai_output(
     output.reviewed_by = reviewer_id
     output.reviewed_at = utc_now()
     db.add(output)
-    record_audit_event(db, output.case_id, "ai.output.reviewed", "ai_output", output.id, {"review_status": review_status}, actor=reviewer_id)
+    record_audit_event(db, output.case_id, "ai.output.reviewed", "ai_output", output.id, {"review_status": review_status}, actor=reviewer_id, organization_id=organization_id)
     db.commit()
     db.refresh(output)
     return model_to_dict(output)
 
 
-def create_apply_preview(db: Session, case_id: str, output_id: str, actor: str = "demo_social_worker") -> dict[str, Any] | None:
-    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id))
+def create_apply_preview(db: Session, case_id: str, output_id: str, actor: str = "demo_social_worker", organization_id: int = DEFAULT_ORGANIZATION_ID) -> dict[str, Any] | None:
+    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id, AiOutput.organization_id == organization_id))
     if not output:
         return None
     output_dict = model_to_dict(output)
@@ -336,20 +393,27 @@ def create_apply_preview(db: Session, case_id: str, output_id: str, actor: str =
         "will_write_formal_fields": False,
         "requires_explicit_apply_action": True,
     }
-    record_audit_event(db, output_dict["case_id"], "ai.apply_preview.created", "ai_output", output_dict["id"], {"review_status": output_dict["review_status"]}, actor=actor)
+    record_audit_event(db, output_dict["case_id"], "ai.apply_preview.created", "ai_output", output_dict["id"], {"review_status": output_dict["review_status"]}, actor=actor, organization_id=organization_id)
     db.commit()
     return preview
 
 
-def list_case_assessments(db: Session, case_id: str) -> list[dict[str, Any]]:
-    stmt = select(CaseAssessment).where(CaseAssessment.case_id == case_id).order_by(CaseAssessment.created_at)
+def list_case_assessments(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(CaseAssessment).where(CaseAssessment.case_id == case_id, CaseAssessment.organization_id == organization_id).order_by(CaseAssessment.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def apply_ai_output_to_assessment(db: Session, case_id: str, output_id: str, reviewer_id: str, responsibility_accepted: bool) -> dict[str, Any] | None:
+def apply_ai_output_to_assessment(
+    db: Session,
+    case_id: str,
+    output_id: str,
+    reviewer_id: str,
+    responsibility_accepted: bool,
+    organization_id: int = DEFAULT_ORGANIZATION_ID,
+) -> dict[str, Any] | None:
     if not responsibility_accepted:
         raise ValueError("reviewer_responsibility_required")
-    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id))
+    output = db.scalar(select(AiOutput).where(AiOutput.id == output_id, AiOutput.case_id == case_id, AiOutput.organization_id == organization_id))
     if not output:
         return None
     if output.review_status not in APPLYABLE_REVIEW_STATUSES:
@@ -357,9 +421,10 @@ def apply_ai_output_to_assessment(db: Session, case_id: str, output_id: str, rev
     if output.applied_to:
         raise ValueError("ai_output_already_applied")
 
-    task = db.get(AiTask, output.task_id)
+    task = db.scalar(select(AiTask).where(AiTask.id == output.task_id, AiTask.organization_id == organization_id))
     assessment = CaseAssessment(
         id=_next_id("ASSESS", _assessment_counter, CaseAssessment, db),
+        organization_id=organization_id,
         case_id=output.case_id,
         source_note_id=output.note_id,
         source_ai_output_id=output.id,
@@ -384,29 +449,30 @@ def apply_ai_output_to_assessment(db: Session, case_id: str, output_id: str, rev
         assessment.id,
         {"ai_output_id": output.id, "note_id": output.note_id, "provider": assessment.provider, "prompt_version": assessment.prompt_version, "reviewer_id": reviewer_id},
         actor=reviewer_id,
+        organization_id=organization_id,
     )
     db.commit()
     db.refresh(assessment)
     return model_to_dict(assessment)
 
 
-def list_audit_events(db: Session, case_id: str) -> list[dict[str, Any]]:
-    stmt = select(AuditEvent).where(AuditEvent.case_id == case_id).order_by(AuditEvent.created_at)
+def list_audit_events(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
+    stmt = select(AuditEvent).where(AuditEvent.case_id == case_id, AuditEvent.organization_id == organization_id).order_by(AuditEvent.created_at)
     return [model_to_dict(row) for row in db.scalars(stmt).all()]
 
 
-def list_case_timeline(db: Session, case_id: str) -> list[dict[str, Any]]:
+def list_case_timeline(db: Session, case_id: str, organization_id: int = DEFAULT_ORGANIZATION_ID) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
-    for note in list_case_notes(db, case_id, include_raw=False):
+    for note in list_case_notes(db, case_id, include_raw=False, organization_id=organization_id):
         events.append({"kind": "note", "id": note["id"], "at": note["occurred_at"], "title": note["note_type"], "payload": note})
-    for goal in list_service_goals(db, case_id):
+    for goal in list_service_goals(db, case_id, organization_id=organization_id):
         events.append({"kind": "goal", "id": goal["id"], "at": goal["created_at"], "title": goal["title"], "payload": goal})
-    for link in list_referrals(db, case_id):
+    for link in list_referrals(db, case_id, organization_id=organization_id):
         events.append({"kind": "resource_link", "id": link["id"], "at": link["created_at"], "title": link["resource_code"], "payload": link})
-    for assessment in list_case_assessments(db, case_id):
+    for assessment in list_case_assessments(db, case_id, organization_id=organization_id):
         events.append({"kind": "assessment", "id": assessment["id"], "at": assessment["created_at"], "title": assessment["assessment_type"], "payload": assessment})
-    for ai_output in list_ai_outputs(db, case_id):
+    for ai_output in list_ai_outputs(db, case_id, organization_id=organization_id):
         events.append({"kind": "ai_output", "id": ai_output["id"], "at": ai_output["created_at"], "title": ai_output["output_type"], "payload": ai_output})
-    for audit in list_audit_events(db, case_id):
+    for audit in list_audit_events(db, case_id, organization_id=organization_id):
         events.append({"kind": "audit", "id": str(audit["id"]), "at": audit["created_at"], "title": audit["event_type"], "payload": audit})
     return sorted(events, key=lambda item: item["at"])
