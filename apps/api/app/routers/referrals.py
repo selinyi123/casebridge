@@ -38,6 +38,7 @@ def update_status(case_id: str, referral_id: str, payload: UpdateReferralStatusR
     try:
         referral = update_referral_status(
             db=db,
+            case_id=case_id,
             referral_id=referral_id,
             status=payload.status,
             agreement_status=payload.agreement_status,
@@ -45,7 +46,5 @@ def update_status(case_id: str, referral_id: str, payload: UpdateReferralStatusR
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not referral:
-        raise HTTPException(status_code=404, detail="referral_not_found")
-    if referral.get("case_id") != case_id:
         raise HTTPException(status_code=404, detail="referral_not_found")
     return {"referral": referral}
