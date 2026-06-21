@@ -28,6 +28,7 @@
 | [`docs/product/v0.1.3-plan.md`](docs/product/v0.1.3-plan.md) | 持久化手动个案闭环规划 |
 | [`docs/product/v0.1.4-plan.md`](docs/product/v0.1.4-plan.md) | 手动服务目标与资源链接 gate 规划 |
 | [`docs/product/v0.1.5-plan.md`](docs/product/v0.1.5-plan.md) | AI intake gate 规划 |
+| [`docs/product/v0.1.6-plan.md`](docs/product/v0.1.6-plan.md) | AI intake gate 下一版规划 |
 | [`docs/architecture/schema.md`](docs/architecture/schema.md) | 数据模型 / 系统架构 / 状态机 / API 约定 |
 | [`docs/ai/ai-rules.md`](docs/ai/ai-rules.md) | AI 能力红线 / 8 能力输出 Schema / 人工确认门禁 |
 | [`docs/privacy/privacy-design.md`](docs/privacy/privacy-design.md) | PIPL 对齐 / PII 脱敏 / RBAC / 审计 / 同意管理 |
@@ -41,6 +42,7 @@
 | [`docs/development/v0.1.2-api-checklist.md`](docs/development/v0.1.2-api-checklist.md) | v0.1.2 API 手动验收清单 |
 | [`docs/development/v0.1.3-ui-checklist.md`](docs/development/v0.1.3-ui-checklist.md) | v0.1.3 UI 手动验收清单 |
 | [`docs/development/v0.1.4-checklist.md`](docs/development/v0.1.4-checklist.md) | v0.1.4 手动 gate 验收清单 |
+| [`docs/development/v0.1.5-checklist.md`](docs/development/v0.1.5-checklist.md) | v0.1.5 timeline/audit 验收清单 |
 
 四份核心文档互相引用、共同构成约束。**与文档冲突时，先改文档，再写代码。**
 
@@ -50,7 +52,7 @@
 
 只做一个强闭环，不做大平台。场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-跑通 9 步：建档 → 走访记录 → AI 提取需求/风险 → AI 提示遗漏 → 资源匹配 → 服务计划草稿 → 转介状态 → 督导式复盘 → 成效追踪。
+跑通 9 步：建档 → 走访记录 → AI 提取需求/风险 → AI 提示遗漏 → 资源匹配 → 服务计划草稿 → 转介状态 → 督导复盘 → 成效追踪。
 
 完整演示流见 [`prd.md` §6.4](docs/product/prd.md) 与 [`demo-flow.md`](docs/seeds/demo-flow.md)。
 
@@ -107,7 +109,9 @@
 - [x] v0.1.3 persistence foundation：SQLAlchemy models / repository / seed loader / Alembic baseline 已完成
 - [x] v0.1.3 UI workspace：C-0001 profile / timeline / note form / resources / matching panel 已完成
 - [x] v0.1.4 manual goal/link gate：service-goal API/UI、resource-link API/UI、agreement-state gate 已完成
+- [x] v0.1.5 backend timeline/audit：AuditEvent model、audit writes、unified timeline API 已完成
+- [ ] v0.1.5 web unified timeline panel：本轮尝试更新但被安全检查拦截，需后续拆小 patch
 - [ ] CI 结果待确认：GitHub Actions API smoke + Web build 需要查看运行结果
-- [ ] 下一节点：unified timeline + audit events，然后才进入 AI intake gate
+- [ ] 下一节点：web timeline panel 完成后进入 AI intake gate
 
-> **下一步**：补统一 timeline / audit trail，把 notes、service goals、resource links 统一显示；在 audit trail 完成前仍不接 AI。
+> **下一步**：把前端 timeline 面板拆成更小 patch 更新；确认 CI；然后才进入 AI intake gate。
