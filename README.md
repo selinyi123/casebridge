@@ -22,9 +22,8 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
-| [`docs/product/v0.1.13-plan.md`](docs/product/v0.1.13-plan.md) | Service plan evidence chain 规划 |
-| [`docs/development/v0.1.13.1-checklist.md`](docs/development/v0.1.13.1-checklist.md) | v0.1.13.1 plan/intervention UI 验收清单 |
 | [`docs/development/v0.1.14-checklist.md`](docs/development/v0.1.14-checklist.md) | v0.1.14 supervisor review 验收清单 |
+| [`docs/development/v0.1.15-checklist.md`](docs/development/v0.1.15-checklist.md) | v0.1.15 closure draft report 验收清单 |
 
 ---
 
@@ -32,7 +31,7 @@
 
 场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链事件 → 督导复盘 → 结案准备度支持。
+闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链事件 → 督导复盘 → 结案准备度支持 → 结案草稿报告。
 
 ---
 
@@ -55,5 +54,6 @@
 - [x] v0.1.13 service plan / intervention / evidence chain
 - [x] v0.1.13.1 evidence-chain events / plan create UI / intervention create UI
 - [x] v0.1.14 supervisor review / closure readiness support
+- [x] v0.1.15 closure draft / closure support report
 - [ ] CI 结果待确认
-- [ ] 下一节点：case closure draft / exportable review report
+- [ ] 下一节点：exportable review report / case closure state machine
