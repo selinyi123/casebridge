@@ -57,7 +57,10 @@ def ensure_bootstrap_columns() -> None:
 
 
 def init_db() -> None:
-    # MVP/bootstrap path. Alembic migration is planned for the next hardening step.
+    import app.db.closure_models  # noqa: F401
+    import app.db.service_plan_models  # noqa: F401
+    import app.db.supervisor_review_models  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
     ensure_bootstrap_columns()
 
