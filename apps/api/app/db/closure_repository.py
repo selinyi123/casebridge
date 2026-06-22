@@ -18,10 +18,35 @@ def _next_id(db: Session) -> str:
     return identifier
 
 
+def _markdown_report(case_id: str, readiness: dict[str, Any], reviews: list[dict[str, Any]]) -> str:
+    blockers = readiness.get("blockers", [])
+    summary = readiness.get("evidence_summary", {})
+    lines = [
+        f"# Closure Support Report: {case_id}",
+        "",
+        f"Ready: {readiness.get('ready')}",
+        f"Manual only: {readiness.get('manual_only')}",
+        "",
+        "## Evidence Summary",
+        f"- Plans: {summary.get('plan_count', 0)}",
+        f"- Interventions: {summary.get('intervention_count', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        f"- Evidence events: {summary.get('event_count', 0)}",
+        "",
+        "## Blockers",
+    ]
+    if blockers:
+        lines.extend([f"- {item}" for item in blockers])
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Supervisor Reviews", f"- Count: {len(reviews)}", "", "This report is support material only. It does not close the case."])
+    return "\n".join(lines)
+
+
 def build_closure_report(db: Session, case_id: str, organization_id: int = 1) -> dict[str, Any]:
     readiness = build_closure_readiness(db, case_id, organization_id)
     reviews = list_reviews(db, case_id, organization_id)
-    return {"case_id": case_id, "readiness": readiness, "reviews": reviews, "manual_only": True, "auto_close": False}
+    return {"case_id": case_id, "readiness": readiness, "reviews": reviews, "markdown": _markdown_report(case_id, readiness, reviews), "manual_only": True, "auto_close": False}
 
 
 def list_closure_drafts(db: Session, case_id: str, organization_id: int = 1) -> list[dict[str, Any]]:
