@@ -22,6 +22,7 @@
 | --- | --- |
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
+| [`docs/development/agent-workflows.md`](docs/development/agent-workflows.md) | AI 辅助开发 agents/workflows 操作规范 |
 | [`docs/development/v0.1.15-checklist.md`](docs/development/v0.1.15-checklist.md) | v0.1.15 closure draft report 验收清单 |
 | [`docs/development/v0.1.15.1-checklist.md`](docs/development/v0.1.15.1-checklist.md) | v0.1.15.1 closure UI / route test 验收清单 |
 
@@ -55,6 +56,6 @@
 - [x] v0.1.13.1 evidence-chain events / plan create UI / intervention create UI
 - [x] v0.1.14 supervisor review / closure readiness support
 - [x] v0.1.15 closure draft / closure support report
-- [x] v0.1.15.1 closure draft create UI / route test / markdown report
+- [x] v0.1.15.1 closure draft create UI / route test / markdown report / agent workflow manifest
 - [ ] CI 结果待确认
 - [ ] 下一节点：case closure state machine / exportable report
