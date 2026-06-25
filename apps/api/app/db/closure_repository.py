@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.closure_models import CaseClosureDraft
-from app.db.models import AuditEvent, utc_now, model_to_dict
+from app.db.models import AuditEvent, CaseRecord, utc_now, model_to_dict
 from app.db.supervisor_review_repository import build_closure_readiness, list_reviews
 
 _closure_counter = count(1)
@@ -86,3 +86,23 @@ def approve_closure_draft(db: Session, case_id: str, draft_id: str, decision: st
     db.commit()
     db.refresh(draft)
     return model_to_dict(draft)
+
+
+def close_case_from_approved_draft(db: Session, case_id: str, draft_id: str, actor: str, organization_id: int = 1) -> dict[str, Any]:
+    draft = db.scalar(select(CaseClosureDraft).where(CaseClosureDraft.id == draft_id, CaseClosureDraft.organization_id == organization_id, CaseClosureDraft.case_id == case_id))
+    if not draft:
+        raise ValueError("closure_draft_not_found")
+    if draft.draft_status != "approved":
+        raise ValueError("closure_draft_not_approved")
+    case = db.scalar(select(CaseRecord).where(CaseRecord.id == case_id, CaseRecord.organization_id == organization_id))
+    if not case:
+        raise ValueError("case_not_found")
+    if case.status == "closed":
+        raise ValueError("case_already_closed")
+    case.status = "closed"
+    case.stage = "closed"
+    db.add(case)
+    db.add(AuditEvent(organization_id=organization_id, case_id=case_id, event_type="case.closed", entity_type="case", entity_id=case_id, actor=actor, payload={"closure_draft_id": draft.id, "human_confirmed": True}))
+    db.commit()
+    db.refresh(case)
+    return model_to_dict(case)
