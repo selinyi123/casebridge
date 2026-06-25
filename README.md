@@ -23,9 +23,8 @@
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
 | [`docs/development/agent-workflows.md`](docs/development/agent-workflows.md) | AI 辅助开发 agents/workflows 操作规范 |
-| [`docs/development/v0.1.15-checklist.md`](docs/development/v0.1.15-checklist.md) | v0.1.15 closure draft report 验收清单 |
-| [`docs/development/v0.1.15.1-checklist.md`](docs/development/v0.1.15.1-checklist.md) | v0.1.15.1 closure UI / route test 验收清单 |
 | [`docs/development/v0.1.16-checklist.md`](docs/development/v0.1.16-checklist.md) | v0.1.16 case closure state machine 验收清单 |
+| [`docs/development/v0.1.16.1-checklist.md`](docs/development/v0.1.16.1-checklist.md) | v0.1.16.1 reopen workflow 验收清单 |
 
 ---
 
@@ -33,7 +32,7 @@
 
 场景：青桥街道社工站，服务对象 C-0001（78 岁独居老人）。
 
-闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链事件 → 督导复盘 → 结案准备度支持 → 结案草稿报告 → 草稿审核 → 显式结案。
+闭环：建档 → 走访记录 → AI 草稿 → 人工审核 → 显式应用到正式评估 → 评估版本 → 服务计划 → 介入记录 → 手动成效记录 → 证据链事件 → 督导复盘 → 结案准备度支持 → 结案草稿报告 → 草稿审核 → 显式结案 → 显式重开。
 
 ---
 
@@ -59,5 +58,6 @@
 - [x] v0.1.15 closure draft / closure support report
 - [x] v0.1.15.1 closure draft create UI / route test / markdown report / agent workflow manifest
 - [x] v0.1.16 explicit case closure state machine
+- [x] v0.1.16.1 explicit reopen workflow / isolated route test
 - [ ] CI 结果待确认
-- [ ] 下一节点：reopen workflow / exportable report
+- [ ] 下一节点：exportable report package / test database isolation
