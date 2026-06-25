@@ -1,0 +1,49 @@
+version: 1
+project: casebridge
+purpose: ai_assisted_development_workflow_only
+hard_stops:
+  - no_ai_auto_case_closure
+  - no_ai_auto_risk_classification
+  - no_ai_auto_service_plan_creation
+  - no_ai_auto_intervention_creation
+  - no_ai_auto_outcome_scoring
+  - no_formal_write_without_authenticated_human_actor
+agents:
+  research_agent:
+    output: evidence_notes
+    duties:
+      - search_non_repeated_public_references
+      - identify_reusable_patterns
+      - define_non_goals
+  product_agent:
+    output: bounded_version_scope
+    duties:
+      - map_research_to_acceptance_criteria
+      - preserve_manual_responsibility
+      - keep_privacy_first
+  implementation_agent:
+    output: repository_patch
+    duties:
+      - implement_model_repository_api_before_ui
+      - prefer_existing_router_over_new_framework
+      - add_audit_event_for_formal_write
+  review_agent:
+    output: risk_register
+    duties:
+      - check_role_boundaries
+      - check_manual_only_behavior
+      - check_audit_trail
+      - check_data_isolation
+  qa_agent:
+    output: test_and_ci_notes
+    duties:
+      - add_repository_or_route_tests
+      - state_untested_paths
+      - verify_ci_status_if_available
+workflow:
+  - research_agent
+  - product_agent
+  - implementation_agent
+  - review_agent
+  - qa_agent
+  - final_report
