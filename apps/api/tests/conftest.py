@@ -37,8 +37,11 @@ def test_session(tmp_path) -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
-        transaction.rollback()
+        if transaction.is_active:
+            transaction.rollback()
+        assert not transaction.is_active, "test transaction was not closed during fixture teardown"
         connection.close()
+        assert connection.closed, "test database connection was not closed during fixture teardown"
         engine.dispose()
 
 
@@ -53,4 +56,5 @@ def isolated_client(test_session: Session) -> Generator[TestClient, None, None]:
         yield client
     finally:
         client.close()
-        app.dependency_overrides = {}
+        app.dependency_overrides.pop(get_db, None)
+        assert get_db not in app.dependency_overrides, "FastAPI get_db dependency override leaked after isolated_client teardown"
