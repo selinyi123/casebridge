@@ -2,11 +2,11 @@
 
 ## Problem
 
-Some route-level tests previously mutated the demo case `CASE-0001`. That made tests order-sensitive and could affect later manual demo use.
+Some route-level and repository-level tests previously used the default demo database or the demo case `CASE-0001`. That made tests order-sensitive and could affect later manual demo use.
 
 ## Current implementation
 
-Route tests now use a dedicated test database fixture and route data factory.
+Tests now use a dedicated test database fixture and data factory.
 
 Implemented components:
 
@@ -23,12 +23,20 @@ The fixture creates a temporary SQLite database, initializes SQLAlchemy metadata
 - Closure state route test uses `CASE-CLOSE-ROUTE` in the test database.
 - Reopen state route test uses `CASE-REOPEN-ROUTE` in the test database.
 
+## Current repository coverage
+
+- Assessment version repository test uses `test_session`.
+- Closure repository test uses `test_session`.
+- Service plan repository test uses `test_session`.
+- Supervisor review repository test uses `test_session`.
+
 ## Why this design
 
 - It keeps real route dependencies active.
 - It preserves JWT role checks.
 - It preserves audit writes.
 - It avoids touching local demo data.
+- It avoids mocking repository behavior away.
 
 ## Future hardening
 
