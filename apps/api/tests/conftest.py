@@ -20,8 +20,10 @@ from app.main import app
 def test_session(tmp_path) -> Generator[Session, None, None]:
     database_path = tmp_path / "casebridge_test.db"
     engine = create_engine(f"sqlite:///{database_path}", connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
     Base.metadata.create_all(bind=engine)
+    connection = engine.connect()
+    transaction = connection.begin()
+    TestingSessionLocal = sessionmaker(bind=connection, autoflush=False, autocommit=False, expire_on_commit=False, join_transaction_mode="create_savepoint")
     session = TestingSessionLocal()
     session.add_all(
         [
@@ -35,6 +37,8 @@ def test_session(tmp_path) -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+        transaction.rollback()
+        connection.close()
         engine.dispose()
 
 
