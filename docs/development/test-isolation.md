@@ -1,28 +1,38 @@
 # Test Isolation Strategy
 
-## Current problem
+## Problem
 
 Some route-level tests previously mutated the demo case `CASE-0001`. That made tests order-sensitive and could affect later manual demo use.
 
-## Current mitigation
+## Current implementation
 
-Route tests now seed dedicated test cases through `apps/api/tests/factories.py`.
+Route tests now use a dedicated test database fixture and route data factory.
 
-- Closure state route test uses `CASE-CLOSE-ROUTE`.
-- Reopen state route test uses `CASE-REOPEN-ROUTE`.
-- Shared helper: `seed_route_case()`.
+Implemented components:
 
-This reduces direct demo-case pollution while keeping the existing app and database wiring unchanged.
+- `apps/api/tests/conftest.py`
+- `apps/api/tests/factories.py`
+- `isolated_client`
+- `test_session`
+- `seed_route_case()`
+
+The fixture creates a temporary SQLite database, initializes SQLAlchemy metadata, seeds demo users required by role-gated routes, overrides FastAPI `get_db`, and clears `app.dependency_overrides` after each test.
+
+## Current route coverage
+
+- Closure state route test uses `CASE-CLOSE-ROUTE` in the test database.
+- Reopen state route test uses `CASE-REOPEN-ROUTE` in the test database.
+
+## Why this design
+
+- It keeps real route dependencies active.
+- It preserves JWT role checks.
+- It preserves audit writes.
+- It avoids touching local demo data.
 
 ## Future hardening
 
-The next level is a dedicated test database fixture:
-
-1. Use a temporary SQLite file per test session.
-2. Override FastAPI `get_db` with `app.dependency_overrides`.
-3. Create schema once for the test database.
-4. Seed only the data each route contract needs.
-5. Reset overrides after each test module.
+The next level is transaction rollback per test or a dedicated test database per module with stricter teardown checks.
 
 ## Non-goals
 
