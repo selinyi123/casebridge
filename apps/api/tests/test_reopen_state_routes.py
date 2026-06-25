@@ -1,9 +1,8 @@
 from fastapi.testclient import TestClient
 
 from app.core.auth import create_access_token
-from app.db.models import CaseRecord, Client
-from app.db.session import SessionLocal
 from app.main import app
+from tests.factories import seed_route_case
 
 
 def headers(username: str, role: str) -> dict[str, str]:
@@ -11,16 +10,9 @@ def headers(username: str, role: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def seed_closed_case(case_id: str) -> None:
-    with SessionLocal() as db:
-        db.merge(Client(code="CLIENT-REOPEN-TEST", organization_id=1, display_name="Reopen Test", age=80, community="Test", client_type="demo", primary_concern="Test"))
-        db.merge(CaseRecord(id=case_id, organization_id=1, client_code="CLIENT-REOPEN-TEST", title="Reopen route test", stage="closed", status="closed"))
-        db.commit()
-
-
 def test_explicit_reopen_requires_approved_request_and_confirmation() -> None:
     case_id = "CASE-REOPEN-ROUTE"
-    seed_closed_case(case_id)
+    seed_route_case(case_id, status="closed", stage="closed")
     with TestClient(app) as client:
         worker = headers("demo_social_worker", "social_worker")
         supervisor = headers("demo_supervisor", "supervisor")
