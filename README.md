@@ -29,6 +29,7 @@
 | [`docs/development/v0.1.16.3-checklist.md`](docs/development/v0.1.16.3-checklist.md) | v0.1.16.3 full test DB override 验收清单 |
 | [`docs/development/v0.1.16.4-checklist.md`](docs/development/v0.1.16.4-checklist.md) | v0.1.16.4 repository test migration 验收清单 |
 | [`docs/development/v0.1.16.5-checklist.md`](docs/development/v0.1.16.5-checklist.md) | v0.1.16.5 transaction rollback test session 验收清单 |
+| [`docs/development/v0.1.16.6-checklist.md`](docs/development/v0.1.16.6-checklist.md) | v0.1.16.6 test teardown assertions 验收清单 |
 
 ---
 
@@ -67,5 +68,6 @@
 - [x] v0.1.16.3 full test DB override for closure/reopen routes
 - [x] v0.1.16.4 repository test migration
 - [x] v0.1.16.5 rollback-backed test session
+- [x] v0.1.16.6 test teardown assertions
 - [ ] CI 结果待确认
-- [ ] 下一节点：exportable report package / teardown assertions
+- [ ] 下一节点：exportable report package / selected table residue checks
