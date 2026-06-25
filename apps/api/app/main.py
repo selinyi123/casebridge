@@ -14,13 +14,14 @@ from app.routers.goals import router as goals_router
 from app.routers.health import router as health_router
 from app.routers.outcomes import router as outcomes_router
 from app.routers.referrals import router as referrals_router
+from app.routers.reopen_state import router as reopen_state_router
 from app.routers.resources import router as resources_router
 from app.routers.timeline import router as timeline_router
 
 app = FastAPI(
     title="CaseBridge API",
     description="CaseBridge social-work case-service API.",
-    version="0.1.16-case-closure-state-machine",
+    version="0.1.16.1-reopen-workflow",
 )
 
 app.add_middleware(
@@ -47,6 +48,7 @@ app.include_router(cases_router, prefix="/api/v1")
 app.include_router(assessments_router, prefix="/api/v1")
 app.include_router(goals_router, prefix="/api/v1")
 app.include_router(closure_state_router, prefix="/api/v1")
+app.include_router(reopen_state_router, prefix="/api/v1")
 app.include_router(outcomes_router, prefix="/api/v1")
 app.include_router(referrals_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")
@@ -58,6 +60,6 @@ app.include_router(ai_router, prefix="/api/v1")
 def root() -> dict[str, str]:
     return {
         "name": "CaseBridge API",
-        "version": "0.1.16-case-closure-state-machine",
+        "version": "0.1.16.1-reopen-workflow",
         "rule": "Write actions require JWT role gates; AI remains draft-only.",
     }
