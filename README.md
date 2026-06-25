@@ -23,6 +23,7 @@
 | [`docs/product/prd.md`](docs/product/prd.md) | 产品范围与验收标准 |
 | [`docs/product/version-roadmap.md`](docs/product/version-roadmap.md) | 版本路线 |
 | [`docs/development/agent-workflows.md`](docs/development/agent-workflows.md) | AI 辅助开发 agents/workflows 操作规范 |
+| [`docs/development/test-isolation.md`](docs/development/test-isolation.md) | route-level 测试隔离策略 |
 | [`docs/development/v0.1.16-checklist.md`](docs/development/v0.1.16-checklist.md) | v0.1.16 case closure state machine 验收清单 |
 | [`docs/development/v0.1.16.1-checklist.md`](docs/development/v0.1.16.1-checklist.md) | v0.1.16.1 reopen workflow 验收清单 |
 
@@ -59,5 +60,6 @@
 - [x] v0.1.15.1 closure draft create UI / route test / markdown report / agent workflow manifest
 - [x] v0.1.16 explicit case closure state machine
 - [x] v0.1.16.1 explicit reopen workflow / isolated route test
+- [x] v0.1.16.2 route test isolation hardening
 - [ ] CI 结果待确认
-- [ ] 下一节点：exportable report package / test database isolation
+- [ ] 下一节点：exportable report package / full test DB override
