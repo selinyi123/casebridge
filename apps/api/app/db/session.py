@@ -58,6 +58,7 @@ def ensure_bootstrap_columns() -> None:
 
 def init_db() -> None:
     import app.db.closure_models  # noqa: F401
+    import app.db.reopen_models  # noqa: F401
     import app.db.service_plan_models  # noqa: F401
     import app.db.supervisor_review_models  # noqa: F401
 
