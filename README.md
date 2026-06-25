@@ -26,6 +26,7 @@
 | [`docs/development/test-isolation.md`](docs/development/test-isolation.md) | route-level 测试隔离策略 |
 | [`docs/development/v0.1.16-checklist.md`](docs/development/v0.1.16-checklist.md) | v0.1.16 case closure state machine 验收清单 |
 | [`docs/development/v0.1.16.1-checklist.md`](docs/development/v0.1.16.1-checklist.md) | v0.1.16.1 reopen workflow 验收清单 |
+| [`docs/development/v0.1.16.3-checklist.md`](docs/development/v0.1.16.3-checklist.md) | v0.1.16.3 full test DB override 验收清单 |
 
 ---
 
@@ -61,5 +62,6 @@
 - [x] v0.1.16 explicit case closure state machine
 - [x] v0.1.16.1 explicit reopen workflow / isolated route test
 - [x] v0.1.16.2 route test isolation hardening
+- [x] v0.1.16.3 full test DB override for closure/reopen routes
 - [ ] CI 结果待确认
-- [ ] 下一节点：exportable report package / full test DB override
+- [ ] 下一节点：exportable report package / repository test migration
