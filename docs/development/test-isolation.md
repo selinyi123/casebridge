@@ -6,7 +6,7 @@ Some route-level and repository-level tests previously used the default demo dat
 
 ## Current implementation
 
-Tests now use a dedicated test database fixture and data factory.
+Tests now use a dedicated test database fixture, an external transaction, and a data factory.
 
 Implemented components:
 
@@ -16,7 +16,7 @@ Implemented components:
 - `test_session`
 - `seed_route_case()`
 
-The fixture creates a temporary SQLite database, initializes SQLAlchemy metadata, seeds demo users required by role-gated routes, overrides FastAPI `get_db`, and clears `app.dependency_overrides` after each test.
+The fixture creates a temporary SQLite database, initializes SQLAlchemy metadata, opens a connection-level transaction, binds a Session with `join_transaction_mode="create_savepoint"`, seeds demo users required by role-gated routes, overrides FastAPI `get_db`, and clears `app.dependency_overrides` after each test.
 
 ## Current route coverage
 
@@ -37,10 +37,11 @@ The fixture creates a temporary SQLite database, initializes SQLAlchemy metadata
 - It preserves audit writes.
 - It avoids touching local demo data.
 - It avoids mocking repository behavior away.
+- It allows code under test to call `commit()` while the outer transaction can still be rolled back.
 
 ## Future hardening
 
-The next level is transaction rollback per test or a dedicated test database per module with stricter teardown checks.
+The next level is adding teardown assertions and broader migration of remaining repository tests into `test_session`.
 
 ## Non-goals
 
